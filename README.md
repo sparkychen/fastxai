@@ -1,3 +1,16 @@
+github 使用个人访问令牌
+创建个人访问令牌
+登录GitHub，点击右上角头像 -> Settings​ -> 左侧边栏最下方找到 Developer settings。
+点击 Personal access tokens​ -> Tokens (classic)​ -> Generate new token​ -> Generate new token (classic)。
+为令牌命名（例如 "My Local Machine"），设置过期时间，在权限（scopes）下一定要勾选 repo（包含所有仓库权限），根据需要勾选其他权限
+
+点击页面底部的 Generate token。
+
+使用令牌进行推送
+当您再次执行 git push -u origin main时：
+Username: 输入您的GitHub用户名 sparkychen。
+Password: 这里不再输入您的GitHub登录密码，而是粘贴刚才复制的个人访问令牌。
+
 步骤 1：全局设置凭证助手（关键一步！）
 git config --global credential.helper store
 步骤 2：执行一次推送（输入一次后永久记住）
