@@ -1,0 +1,54 @@
+__pycache__/              # Python 编译缓存
+*.py[cod]                 # 编译产物
+*$py.class                # Jython 编译文件
+dist/                     # 打包分发目录
+build/                    # 构建中间文件
+*.egg-info/               # Python 包元数据
+pip-wheel-metadata/       # pip 轮子元数据
+venv/                     # 虚拟环境
+.venv/                    # 另一种虚拟环境命名
+.env                      # 敏感配置文件
+.env.*                    # 环境变量模板
+__init__.pyc              # 编译后的初始化文件
+
+uvicorn.log               # Uvicorn 日志
+api-docs/                 # 自动生成的 API 文档
+.vscode/                  # VSCode 配置
+.idea/                    # PyCharm 配置
+*.swp                     # Vim 交换文件
+.DS_Store                 # macOS 系统文件
+Thumbs.db                 # Windows 缩略图
+
+# logs/                     # 训练日志
+
+.vscode/settings.json     # VSCode 工作区设置
+.pycharm_helpers/         # PyCharm 辅助文件
+coverage.xml              # 代码覆盖率报告
+htmlcov/                  # coverage.py 生成的报告
+.pytest_cache/            # pytest 缓存
+mypy_cache/               # mypy 类型检查缓存
+coverage/                 # 覆盖率数据
+__pycache__/              # Python 编译缓存
+
+*.log                     # 日志文件
+coredump                  # 内核转储文件
+swap*                     # 交换文件
+temp*                     # 临时文件
+tmp*                      # 临时文件
+
+
+
+# ======================
+# AI/ML 相关忽略
+# ======================
+*.pt                      # PyTorch 模型文件
+*.pth                     # 模型路径文件
+*.h5                      # Keras 模型
+*.joblib                  # scikit-learn 模型
+*.pkl                     # pickle 序列化文件
+*.npy                     # NumPy 二进制文件
+*.hdf5                    # HDF5 数据格式
+checkpoints/              # 模型训练检查点
+data/                     # 原始数据集 (建议通过 Git LFS 管理)
+output/                   # 模型推理输出
+logs/                     # 训练日志
