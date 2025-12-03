@@ -1,7 +1,7 @@
 [project]
 name = "fastxai"
 version = "0.1.0"
-description = "Add your description here"
+description = "An multi-agents project with langchain(langgraph)1.0，realtime knowledge graph(graphiti-core), vector dbs and LLM..."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name="chenjunfeng", email="cjf_junfeng@163.com"}]
@@ -13,13 +13,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Framework :: FastAPI",
-    "Framework :: langchain",
-    "Framework :: langgraph",
+    "Framework :: FastMCP",
+    "Framework :: langchain & langgraph",
+    "Framework :: multi-agents",
+    "Framework :: realtime knowledge graph",
     "Framework :: graphiti_core",
 ]
 
 dependencies = [
-    "aioredis==2.0.1",
     "asyncpg==0.31.0",
     "fastapi-structlog==0.7.0",
     "fastapi-users==15.0.1",
@@ -44,8 +45,8 @@ dependencies = [
     "graphiti-core>=0.24.1",
     "langchain==1.1.0",
     "langchain-community==0.4.1",
-    "langchain-milvus==0.3.0",
-    "langchain-neo4j==0.6.0",
+    "langchain-milvus>=0.3.0",
+    "langchain-neo4j>=0.6.0",
     "langchain-openai==1.1.0",
     "langchain-qdrant==1.1.0",
     "langgraph==1.0.4",
@@ -54,6 +55,9 @@ dependencies = [
     "tenacity>=9.1.2",
     "mysqlclient==2.2.7",
     "asyncmy==0.2.10",
+    "celery==5.5.3",
+    "flower==2.0.1",
+    "redis==7.1.0",
 ]
 
 [tool.uv]
