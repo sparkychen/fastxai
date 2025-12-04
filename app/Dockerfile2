@@ -1,0 +1,56 @@
+# 构建阶段
+FROM python:3.11-slim as builder
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Poetry
+RUN pip install --no-cache-dir poetry==1.8.3
+
+WORKDIR /app
+COPY pyproject.toml poetry.lock ./
+
+# 安装依赖（不含开发包）
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-dev --no-interaction
+
+# 生产阶段
+FROM python:3.11-slim
+
+# 安全配置：非root用户运行
+RUN useradd -m appuser && mkdir -p /app/logs && chown -R appuser:appuser /app
+WORKDIR /app
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制依赖和代码
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY . .
+
+# 切换到非root用户
+USER appuser
+
+# 环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    ENVIRONMENT=production
+
+# 暴露端口
+EXPOSE 8000
+
+# 启动命令（高性能配置）
+CMD ["uvicorn", "app.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "4",  # 建议=CPU核心数*2
+     "--loop", "uvloop", \
+     "--http", "httptools", \
+     "--proxy-headers", \
+     "--limit-concurrency", "10000"]
