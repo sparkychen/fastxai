@@ -34,6 +34,12 @@ class SecuritySettings(BaseSettings):
     TRUSTED_HOSTS: List[str] = []
     SECURE_COOKIES: bool = True
     SESSION_TIMEOUT_MINUTES: int = 60
+
+    # CORS安全配置（严格限制）
+    CORS_ORIGINS: List[str] = []  # 生产环境显式指定，禁止通配符
+    CORS_ALLOW_CREDENTIALS: bool = True
+    CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    CORS_ALLOW_HEADERS: List[str] = ["Authorization", "Content-Type", "X-Request-ID"]
     
     # 加密配置
     ENCRYPTION_KEY: str = Field(..., env="ENCRYPTION_KEY")

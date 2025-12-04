@@ -9,6 +9,14 @@ from app.security.monitoring import SecurityMonitoringService
 from app.security.audit import AuditService, get_audit_service
 from app.config.database import get_db
 
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ]
+)
 logger = structlog.get_logger()
 
 @asynccontextmanager
