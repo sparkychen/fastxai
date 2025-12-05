@@ -1054,6 +1054,21 @@ wheels = [
 ]
 
 [[package]]
+name = "fastapi-csrf-protect"
+version = "1.0.7"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "itsdangerous" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "starlette" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/f6/1a/fedbcb4aba24ccc8abfb5d30e08112073c6a9f20b8d88adbdd3051ceedac/fastapi_csrf_protect-1.0.7.tar.gz", hash = "sha256:888b15b232625aae5b997fbcf81ef45633a7694f0312a054f1eec6d132b295fb" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/bf/10/f248aab919678444723d557da918088e5c737b44e03e3aa4a0ad7afc7dae/fastapi_csrf_protect-1.0.7-py3-none-any.whl", hash = "sha256:ca3c5b50564af932ac4ed3d06caeed61bf16eed13a31cfe2bdfc3f7c1e8612a3" },
+]
+
+[[package]]
 name = "fastapi-structlog"
 version = "0.7.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -1223,6 +1238,7 @@ dependencies = [
     { name = "duckdb" },
     { name = "fastapi", extra = ["standard", "standard-no-fastapi-cloud-cli"] },
     { name = "fastapi-bgtasks-dashboard" },
+    { name = "fastapi-csrf-protect" },
     { name = "fastapi-structlog" },
     { name = "fastapi-users" },
     { name = "fastmcp" },
@@ -1279,6 +1295,7 @@ requires-dist = [
     { name = "duckdb", specifier = "==1.4.2" },
     { name = "fastapi", extras = ["standard", "standard-no-fastapi-cloud-cli"], specifier = "==0.123.9" },
     { name = "fastapi-bgtasks-dashboard", specifier = ">=0.1.5" },
+    { name = "fastapi-csrf-protect", specifier = ">=1.0.7" },
     { name = "fastapi-structlog", specifier = "==0.7.0" },
     { name = "fastapi-users", specifier = "==15.0.1" },
     { name = "fastmcp", specifier = "==2.13.3" },
@@ -1291,9 +1308,9 @@ requires-dist = [
     { name = "langchain-neo4j", specifier = ">=0.6.0" },
     { name = "langchain-openai", specifier = "==1.1.0" },
     { name = "langchain-qdrant", specifier = "==1.1.0" },
-    { name = "langchain-redis", specifier = "==0.2.5" },
+    { name = "langchain-redis", specifier = ">=0.2.5" },
     { name = "langgraph", specifier = "==1.0.4" },
-    { name = "langgraph-checkpoint-postgres", specifier = "==3.0.1" },
+    { name = "langgraph-checkpoint-postgres", specifier = ">=3.0.1" },
     { name = "motor", specifier = "==3.7.1" },
     { name = "msgpack", specifier = "==1.1.2" },
     { name = "mysqlclient", specifier = "==2.2.7" },
@@ -1841,6 +1858,15 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/31/f0/7f31609ec2fb84b140ff573abf1cce78cd3a2a3c6479b60aa82b69d40d2a/instructor-1.13.0.tar.gz", hash = "sha256:bf838a5c503fafdd034a9b1f8544c5e1f62462eea9f89932bc75c116ad35ab5a" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/95/64/6542ac826a4c9b937b67c096a785af1aaa26b22fcb7c81223cfe4038205b/instructor-1.13.0-py3-none-any.whl", hash = "sha256:2b735b6ea0d3194548369a18254f1dde83cb5ec0b182de77adbadd8be73caddc" },
+]
+
+[[package]]
+name = "itsdangerous"
+version = "2.2.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/9c/cb/8ac0172223afbccb63986cc25049b154ecfb5e85932587206f42317be31d/itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef" },
 ]
 
 [[package]]
