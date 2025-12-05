@@ -65,7 +65,8 @@ dependencies = [
     "bleach>=6.3.0",
     "slowapi>=0.1.9",
     "motor==3.7.1",
-    "fastapi-csrf-protect>=1.0.7"
+    "fastapi-csrf-protect>=1.0.7",
+    "sentry-sdk[fastapi]>=2.47.0",
 ]
 
 [tool.uv]
