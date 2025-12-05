@@ -1231,6 +1231,7 @@ name = "fastxai"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "asgi-correlation-id" },
     { name = "asyncmy" },
     { name = "asyncpg" },
     { name = "bleach" },
@@ -1288,6 +1289,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "asgi-correlation-id", specifier = ">=4.3.4" },
     { name = "asyncmy", specifier = "==0.2.10" },
     { name = "asyncpg", specifier = "==0.31.0" },
     { name = "bleach", specifier = ">=6.3.0" },
