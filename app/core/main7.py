@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
+from app.core.co_config import settings
 from app.core.logger import logger
 from app.middleware.logging import RequestContextLoggingMiddleware
 from app.middleware.tracing import TracingMiddleware

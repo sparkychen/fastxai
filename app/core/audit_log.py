@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import re
 from typing import Dict, Any, Optional
-from app.core.config import audit_settings
+from app.core.config import settings
 
 # ========== 敏感数据脱敏 ==========
 def mask_sensitive_data(data: Any) -> Any:
@@ -14,7 +14,7 @@ def mask_sensitive_data(data: Any) -> Any:
     if isinstance(data, dict):
         masked = {}
         for key, value in data.items():
-            if key.lower() in audit_settings.AUDIT_LOG_SENSITIVE_FIELDS:
+            if key.lower() in settings.AUDIT_LOG_SENSITIVE_FIELDS:
                 masked[key] = mask_field(key, value)
             else:
                 masked[key] = mask_sensitive_data(value)
@@ -61,7 +61,7 @@ def mask_field(field_name: str, value: Any) -> str:
 # ========== 审计日志签名（防篡改） ==========
 def sign_audit_log(log_data: Dict[str, Any]) -> str:
     """生成审计日志签名（HMAC-SHA256）"""
-    if not audit_settings.AUDIT_LOG_SIGN_ENABLE:
+    if not settings.AUDIT_LOG_SIGN_ENABLE:
         return ""
     
     # 提取签名字段（排序保证一致性）
@@ -73,7 +73,7 @@ def sign_audit_log(log_data: Dict[str, Any]) -> str:
     sign_content = json.dumps(sign_fields, sort_keys=True, default=str).encode()
     # 生成HMAC签名
     signature = hmac.new(
-        audit_settings.AUDIT_LOG_SIGN_SECRET,
+        settings.AUDIT_LOG_SIGN_SECRET,
         sign_content,
         hashlib.sha256
     ).hexdigest()
@@ -82,7 +82,7 @@ def sign_audit_log(log_data: Dict[str, Any]) -> str:
 # ========== 审计日志验证 ==========
 def verify_audit_log(log_data: Dict[str, Any]) -> bool:
     """验证审计日志签名（防篡改）"""
-    if not audit_settings.AUDIT_LOG_SIGN_ENABLE:
+    if not settings.AUDIT_LOG_SIGN_ENABLE:
         return True
     
     original_sign = log_data.get("signature", "")

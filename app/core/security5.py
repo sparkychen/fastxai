@@ -4,7 +4,7 @@
 import structlog
 from fastapi import Request, HTTPException
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
-from app.core.config import settings
+from app.core.co_config import settings
 from app.core.redis import get_redis_client
 from app.metrics.auth import increment_auth_metric
 

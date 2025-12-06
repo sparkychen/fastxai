@@ -8,7 +8,7 @@ import redis.asyncio as redis
 from prometheus_client import Counter, Histogram, Gauge
 import structlog
 
-from .config import security_settings
+from .sc_config import security_settings
 from .audit import AuditService, AuditEventType, AuditEventSeverity
 
 logger = structlog.get_logger()

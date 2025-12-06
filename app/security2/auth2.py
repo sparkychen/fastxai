@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
 from app.database.postgres import get_db
 from app.database.models.user import User, UserRole
-from app.security.config import security_settings
+from app.security.sc_config import security_settings
 import structlog
 
 logger = structlog.get_logger()

@@ -5,7 +5,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from app.core.config import settings
+from app.core.co_config import settings
 from app.core.db import startup_db, shutdown_db
 from app.core.redis import get_redis_client, close_redis_client
 from app.middleware.logging import StructuredLoggingMiddleware

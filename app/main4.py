@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 import structlog
 import asyncio
 import uvloop
-from app.core.config import audit_settings
+from app.core.co_config import audit_settings
 from app.core.logging import configure_structlog
 from app.core.audit_storage import audit_log_service
 from app.core.audit_middleware import AuditLogMiddleware, audit_log

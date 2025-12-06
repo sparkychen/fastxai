@@ -2,7 +2,7 @@
 
 import aioredis
 import structlog
-from app.core.config import settings
+from app.core.co_config import settings
 
 logger = structlog.get_logger("redis")
 

@@ -1,4 +1,5 @@
-# app/routers/api.py
+# -*- coding: utf-8 -*-
+
 from fastapi import APIRouter, Depends, Request
 from app.core.logger import logger, bind_context
 from app.core.config import settings

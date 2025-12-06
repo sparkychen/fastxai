@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String, DateTime, JSON, Text, Enum as SQLEnum
 
 from ..config.database import Base
-from .config import security_settings
+from .sc_config import security_settings
 
 logger = structlog.get_logger()
 

@@ -15,7 +15,7 @@ import redis.asyncio as redis
 from uuid import uuid4
 import structlog
 
-from .config import security_settings
+from .sc_config import security_settings
 from ..config.database import get_db
 from ..domain.models.user import User
 from ..domain.repositories.user import UserRepository

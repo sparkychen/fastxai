@@ -9,7 +9,7 @@ from fastapi_users import BaseUserManager, UUIDIDMixin
 from fastapi_users.password import PasswordHelper, Argon2PasswordHasher
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from app.models.user import User
-from app.core.config import settings
+from app.core.co_config import settings
 from app.core.redis import get_redis_client
 from app.metrics.auth import increment_auth_metric
 

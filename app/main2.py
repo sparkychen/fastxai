@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import structlog
-from app.security.config import security_settings
+from app.security.sc_config import security_settings
 from app.security.middleware import setup_security_middlewares
 from app.security.rate_limit import setup_rate_limiting
 from app.security.auth import auth_backend, fastapi_users

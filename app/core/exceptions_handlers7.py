@@ -1,6 +1,7 @@
-# app/exceptions/handlers.py
+# -*- coding: utf-8 -*-
+
 from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from app.core.logger import logger
 
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -12,7 +13,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         endpoint=f"{request.method} {request.url.path}",
         exc_info=True,
     )
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=exc.status_code,
         content={
             "detail": exc.detail,
@@ -29,7 +30,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
         exc_info=True,  # 记录完整异常栈
         client_ip=request.client.host,
     )
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=500,
         content={
             "detail": "Internal server error",

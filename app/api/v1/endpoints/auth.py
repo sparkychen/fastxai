@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# app/routers/auth.py
 import structlog
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi_users import FastAPIUsers

@@ -11,7 +11,7 @@ from fastapi_security_headers import SecurityHeadersMiddleware, SecurityHeadersC
 import uuid
 import time
 import structlog
-from app.security.config import security_settings
+from app.security.sc_config import security_settings
 
 logger = structlog.get_logger()
 

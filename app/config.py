@@ -10,9 +10,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import EmailStr, SecretStr, Field
 from cryptography.fernet import Fernet
 
+
 class Settings(BaseSettings):
     
-    APP_NAME: str = "FastXAI-Multi-agents-system"
+    APP_NAME: str = "Fastxai"
     ROOT_DIR: Path = Path(__file__).parent.parent.parent    
     ENV: Literal["dev", "dtaging", "prod"] = "prod"
     API_PREFIX: str = "/api/v1"
@@ -26,11 +27,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # 主库（写）DSN
-    DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
-    DB_READ_DSNS: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
+    DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgreAdmin@localhost:5432/fastxai"]
+    DB_READ_DSNS: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgreAdmin@localhost:5432/fastxai"]
     DB_ENABLE_RW_SEPARATION: bool = True
     DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", 20))           # 常驻连接数（CPU核心*2）
-    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", 10))     # 应急溢出连接
+    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", 40))     # 应急溢出连接
     DB_POOL_RECYCLE: int = int(os.getenv("DB_POOL_RECYCLE", 600))     # 连接回收（<数据库 wait_timeout）
     DB_POOL_TIMEOUT: int = int(os.getenv("DB_POOL_TIMEOUT", 30))    # 连接获取超时
     DB_POOL_PRE_PING: bool = True   # 连接健康检查
@@ -158,7 +159,7 @@ class Settings(BaseSettings):
     JWT_BLACKLIST_TOKEN_TYPE: Literal["access", "refresh", "both"] = "both"
     # MFA配置
     MFA_REQUIRED: bool = True  # 生产环境强制MFA
-    MFA_ISSUER_NAME: str = "FastXAI-MFA"
+    MFA_ISSUER_NAME: str = "FastXAI-Multi-agents"
     
     # 密码策略（企业级强化）
     PASSWORD_MIN_LENGTH: int = 9
@@ -380,9 +381,32 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+class DBSettings:
+    # 多主库DSN（主库+备用主库）
+    db_write_dsns: List[PostgresDsn] = [
+        "postgresql+asyncpg://user:pass@master-db:5432/db",
+        "postgresql+asyncpg://user:pass@backup-master-db:5432/db"
+    ]
+    # 多从库DSN
+    db_read_dsns: List[PostgresDsn] = [
+        "postgresql+asyncpg://user:pass@slave1-db:5432/db",
+        "postgresql+asyncpg://user:pass@slave2-db:5432/db"
+    ]
+    db_enable_rw_separation: bool = True
+    # 连接池配置（分场景LIFO/FIFO）
+    db_pool_use_lifo: bool = db_settings.env == "production"  # 生产=LIFO，开发=FIFO
+    db_pool_size: int = 20
+    db_max_overflow: int = 40
+    db_pool_recycle: int = 280
+    db_connect_timeout: int = 10
+    db_charset: str = "utf8mb4"
+    db_echo: bool = False
+    env: Literal["development", "production"] = "production"
+
 
 class KeyManagementService:
-    """密钥管理服务"""    
+    """密钥管理服务"""
+    
     def __init__(self):
         self.fernet = Fernet(Settings().ENCRYPTION_KEY.encode())
     
@@ -403,14 +427,14 @@ class KeyManagementService:
 settings = Settings()
 key_manager = KeyManagementService()
 
-# # 动态调整日志配置（根据环境）
-# if settings.ENV == "dev":
-#     settings.LOG.FORMAT = "console"
-#     settings.LOG.LEVEL = "DEBUG"
-#     settings.LOG.ENABLE_ASYNC = False
-#     settings.LOG.FILE_ENABLE = False
-# elif settings.ENV == "prod":
-#     settings.LOG.FORMAT = "json"
-#     settings.LOG.LEVEL = "INFO"
-#     settings.LOG.ENABLE_ASYNC = True
-#     settings.LOG.FILE_ENABLE = True
+# 动态调整日志配置（根据环境）
+if settings.ENV == "dev":
+    settings.LOG.FORMAT = "console"
+    settings.LOG.LEVEL = "DEBUG"
+    settings.LOG.ENABLE_ASYNC = False
+    settings.LOG.FILE_ENABLE = False
+elif settings.ENV == "prod":
+    settings.LOG.FORMAT = "json"
+    settings.LOG.LEVEL = "INFO"
+    settings.LOG.ENABLE_ASYNC = True
+    settings.LOG.FILE_ENABLE = True

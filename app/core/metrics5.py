@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# app/metrics/auth.py
 from prometheus_client import Counter, Gauge, Histogram
 
 # 认证相关指标

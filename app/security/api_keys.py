@@ -11,7 +11,7 @@ from sqlalchemy import Column, String, DateTime, Boolean, JSON
 import structlog
 
 from ..config.database import Base
-from .config import security_settings
+from .sc_config import security_settings
 from .auth import auth_service
 
 logger = structlog.get_logger()

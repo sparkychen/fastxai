@@ -5,12 +5,11 @@ from typing import List, Dict, Any, Optional
 import asyncio
 import aioredis
 import asyncpg
-from elasticsearch_async import AsyncElasticsearch
-import structlog
+# import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from app.core.config import audit_settings
+# from app.core.co_config import audit_settings
 from app.core.audit import sign_audit_log
-from app.core.logging import audit_logger
+from app.core.logger import audit_logger
 
 # ========== 存储抽象基类 ==========
 class AuditStorage:

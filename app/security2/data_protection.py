@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 import re
 from typing import Dict, Any, Optional
-from app.security.config import security_settings
+from app.security.sc_config import security_settings
 import structlog
 
 logger = structlog.get_logger()

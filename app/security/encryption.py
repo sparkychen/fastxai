@@ -166,15 +166,13 @@ class DatabaseEncryptionService:
                 {"encrypted_value": encrypted_value, "record_id": record_id}
             )
             
-            await self.db_session.commit()
-            
+            await self.db_session.commit()            
             logger.info(
                 "Field encrypted successfully",
                 table=table_name,
                 field=field_name,
                 record_id=record_id
-            )
-            
+            )            
             return True
         
         except Exception as e:

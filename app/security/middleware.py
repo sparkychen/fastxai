@@ -14,7 +14,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import structlog
 import re
 
-from .config import security_settings
+from .sc_config import security_settings
 from .auth import auth_service
 
 logger = structlog.get_logger()
