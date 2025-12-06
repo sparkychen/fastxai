@@ -2,14 +2,13 @@
 
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any
 from enum import Enum
 import redis.asyncio as redis
 from prometheus_client import Counter, Histogram, Gauge
 import structlog
-
-from .sc_config import security_settings
-from .audit import AuditService, AuditEventType, AuditEventSeverity
+from app.core.config import settings
+from ..models.audit import AuditService, AuditEventType, AuditEventSeverity
 
 logger = structlog.get_logger()
 

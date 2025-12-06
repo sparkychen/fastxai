@@ -13,8 +13,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import structlog
 import re
-
-from .sc_config import security_settings
+from app.core.config import settings
 from .auth import auth_service
 
 logger = structlog.get_logger()
@@ -22,7 +21,7 @@ logger = structlog.get_logger()
 # 初始化速率限制器
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=[security_settings.API_RATE_LIMIT]
+    default_limits=[settings.API_RATE_LIMIT]
 )
 
 class SecurityMiddleware:
@@ -40,7 +39,7 @@ class SecurityMiddleware:
         # 2. CORS配置
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=security_settings.CORS_ORIGINS,
+            allow_origins=settings.CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             allow_headers=["*"],
@@ -49,10 +48,10 @@ class SecurityMiddleware:
         )
         
         # 3. 可信主机
-        if security_settings.TRUSTED_HOSTS:
+        if settings.TRUSTED_HOSTS:
             app.add_middleware(
                 TrustedHostMiddleware,
-                allowed_hosts=security_settings.TRUSTED_HOSTS,
+                allowed_hosts=settings.TRUSTED_HOSTS,
             )
         
         # 4. GZIP压缩
@@ -74,7 +73,7 @@ class SecurityMiddleware:
             client_ip = request.client.host if request.client else "0.0.0.0"
             
             # 检查IP黑名单
-            if client_ip in security_settings.IP_BLACKLIST:
+            if client_ip in settings.IP_BLACKLIST:
                 logger.warning("IP blocked", ip=client_ip, path=request.url.path)
                 return Response(
                     content="Access denied",
@@ -83,8 +82,8 @@ class SecurityMiddleware:
                 )
             
             # 检查IP白名单（如果设置了）
-            if (security_settings.IP_WHITELIST and 
-                client_ip not in security_settings.IP_WHITELIST):
+            if (settings.IP_WHITELIST and 
+                client_ip not in settings.IP_WHITELIST):
                 logger.warning("IP not in whitelist", ip=client_ip, path=request.url.path)
                 return Response(
                     content="Access denied",
@@ -100,7 +99,7 @@ class SecurityMiddleware:
                 process_time = time.time() - start_time
                 
                 # 添加安全头
-                for header, value in security_settings.SECURITY_HEADERS.items():
+                for header, value in settings.SECURITY_HEADERS.items():
                     response.headers[header] = value
                 
                 # 添加自定义头
