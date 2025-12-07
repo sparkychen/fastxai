@@ -2,13 +2,13 @@
 
 import os
 import sys
-import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import ORJSONResponse
 from datetime import datetime
-from app.security.middleware import SecurityMiddleware
-from app.security.monitoring import SecurityMonitoringService
+from app.core.middlewares import SecurityMiddleware
+from app.core.monitoring import SecurityMonitoringService
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from app.models.audit import AuditService, get_audit_service
@@ -21,10 +21,22 @@ from app.config.database import get_db
 # from app.middleware.tracing import TracingMiddleware
 from app.core.handlers import http_exception_handler, generic_exception_handler
 from asgi_correlation_id import CorrelationIdMiddleware  # 需额外安装：pip install asgi-correlation-id
+from typing import Any
+import orjson
 # 初始化日志
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()
+
+
+class CustomORJSONResponse(ORJSONResponse):
+    def render(self, content: Any) -> bytes:
+        return orjson.dumps(
+            content,
+            option=orjson.OPT_INDENT_2 | orjson.OPT_NAIVE_UTC | orjson.OPT_NON_STR_KEYS | orjson.OPT_UTC_Z
+
+        )
+
 if settings.SENTRY_DNS:
     from app.core.sentry import configure_sentry
     configure_sentry()
@@ -34,16 +46,15 @@ if sys.platform == "linux" and os.name == "posix":
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     logger.info(
         "Application start...",
         env=settings.ENV,
-        log_level=settings.LOG.LEVEL,
-        log_format=settings.LOG.FORMAT,
-        async_log=settings.LOG.ENABLE_ASYNC,
+        log_level=settings.AUDIT_LOG_LEVEL,
+        log_format=settings.AUDIT_LOG_FORMAT,
+        async_log=settings.AUDIT_LOG_ASYNC,
     )
     configure_sentry()
     # 启动
@@ -77,12 +88,12 @@ async def lifespan(app: FastAPI):
     await redis_client.close()
 
     logger.info("Application shutting down")
-    # 等待异步日志处理器刷新
-    if settings.LOG.ENABLE_ASYNC:
-        from app.utils.async_logger import async_log_processor
-        await async_log_processor.flush() 
-        import time
-        time.sleep(settings.LOG.ASYNC_FLUSH_INTERVAL + 1)
+    # # 等待异步日志处理器刷新
+    # if settings.LOG.ENABLE_ASYNC:
+    #     from app.utils.async_logger import async_log_processor
+    #     await async_log_processor.flush() 
+    #     import time
+    #     time.sleep(settings.LOG.ASYNC_FLUSH_INTERVAL + 1)
 
 def create_secure_application() -> FastAPI:
     """创建安全加固的FastAPI应用"""
@@ -108,7 +119,7 @@ def create_secure_application() -> FastAPI:
     # 1. CORS中间件
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://your-domain.com"],  # 生产环境严格限制
+        allow_origins=settings.ALLOWED_ORIGINS,  # 生产环境严格限制
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
         allow_headers=["Authorization", "Content-Type"],
@@ -125,15 +136,15 @@ def create_secure_application() -> FastAPI:
     # if settings.TRACING_ENABLE:
     #     app.add_middleware(TracingMiddleware)
     # 3. 请求上下文日志中间件（核心）
-    app.add_middleware(RequestContextLoggingMiddleware)
+    # app.add_middleware(RequestContextLoggingMiddleware)
 
     # ========== 3. 注册异常处理器 ==========
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
     
     # 添加安全路由
-    from app.security.api_keys import validate_api_key
-    from app.security.rbac import require_permission, Permission
+    # from app.security.api_keys import validate_api_key
+    from app.core.rbac import require_permission, Permission
     
     @app.get("/api/secure/status")
     async def secure_status(
@@ -227,27 +238,12 @@ def create_secure_application() -> FastAPI:
             # password=user.password,  # 不要记录
         )
         return user
-        
-    return app
     
+    @app.get("/favicon.ico")
+    async def favicon():
+        return CustomORJSONResponse(status_code=200)
+        
+    return app    
 
 # 创建应用
 app = create_secure_application()
-
-if __name__ == "__main__":
-    
-    
-    # 生产环境配置
-    uvicorn_config = {
-        "host": settings.HOST,
-        "port": settings.PORT,
-        "reload": settings.DEBUG,
-        "workers": 4,  # 多worker处理
-        "proxy_headers": True,  # 支持代理头
-        "forwarded_allow_ips": "*",  # 允许所有转发IP
-        "timeout_keep_alive": 30,  # 连接保持超时
-        "access_log": False,  # 禁用访问日志（使用结构化日志）
-        "log_config": None,
-    }
-    
-    uvicorn.run("main:app", **uvicorn_config)

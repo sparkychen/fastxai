@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     # APP config
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 9968
-
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     ALLOWED_ORIGINS: List[str] = [f"http://{APP_HOST}:{APP_PORT}", f"http://localhost:{APP_PORT}"]
 
-    DEBUG: bool = False
+    DEBUG: bool = False if ENV != "prod" else True
 
     # 主库（写）DSN
     DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
@@ -71,8 +71,8 @@ class Settings(BaseSettings):
 
     FILE_ENABLE: bool = False
     FILE_PATH: Path = Path("/var/log/fastapi/app.log")
-    FILE_ROTATION: str = "500MB"                 # 日志文件轮转大小
-    FILE_RETENTION: str = "30 days"              # 日志留存周期
+    FILE_ROTATION: str = "256MB"                 # 日志文件轮转大小
+    FILE_RETENTION: str = "90 days"              # 日志留存周期
     FILE_COMPRESSION: str = "gz"                 # 压缩格式
 
     # 上下文字段（必选/可选）
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     CACHE_CONTEXT: bool = True                   # 缓存上下文（减少重复计算）
 
     # 审计日志级别与格式
-    AUDIT_LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    AUDIT_LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = LOG_LEVEL
     AUDIT_LOG_FORMAT: Literal["json", "console"] = "json"
     AUDIT_LOG_RETENTION_DAYS: int = 90  # 审计日志保留天数（合规要求）
     AUDIT_LOG_ASYNC: bool = True  # 异步写入（强制开启）
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     # 安全配置
     AUDIT_LOG_SIGN_ENABLE: bool = True  # 日志签名（防篡改）
     AUDIT_LOG_SIGN_SECRET: bytes = os.getenv("AUDIT_LOG_SIGN_SECRET", "").encode()  # 32字节密钥
-    AUDIT_LOG_SENSITIVE_FIELDS: List[str] = ["password", "phone", "id_card", "bank_card", "email", "token"]  # 敏感字段脱敏    
+    AUDIT_LOG_SENSITIVE_FIELDS: List[str] = ["password", "phone", "id_card", "bank_card", "card_no", "email", "token" "access_token"]  # 敏感字段脱敏    
     # 审计日志必选字段（企业级规范）
     AUDIT_LOG_MANDATORY_FIELDS: List[str] = [
         "audit_id", "timestamp", "user_id", "operation", "resource_type",
@@ -118,8 +118,6 @@ class Settings(BaseSettings):
 
     # ================= 审计日志配置 =================
     AUDIT_LOG_ENABLED: bool = True
-    AUDIT_LOG_LEVEL: Literal["INFO", "WARNING", "ERROR"] = "INFO"
-    AUDIT_LOG_FILE: Path = ROOT_DIR / "logs/audit.log"
     
 
     # Vector Stores

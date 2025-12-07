@@ -17,7 +17,7 @@ classifiers = [
     "Framework :: langchain & langgraph",
     "Framework :: multi-agents",
     "Framework :: realtime knowledge graph",
-    "Framework :: graphiti_core",
+    "Framework :: graphiti-core",
 ]
 
 dependencies = [
