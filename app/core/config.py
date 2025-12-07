@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [f"http://{APP_HOST}:{APP_PORT}", f"http://localhost:{APP_PORT}"]
 
     DEBUG: bool = False
-    
+
     # 主库（写）DSN
     DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
     DB_READ_DSNS: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
@@ -134,6 +134,9 @@ class Settings(BaseSettings):
         raise ValueError(f"(chroma) Not supported yet!")
     VECTOR_URL: str = f"http://{VECTOR_HOST}:{VECTOR_PORT}"
     VECTOR_API_KEY: Optional[str] = None
+
+
+    SENTRY_DNS: str = None
     
 
     # Authentication
@@ -156,9 +159,16 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "fastapi:auth"
     JWT_ISSUER: str = "secure-api"
     JWT_BLACKLIST_TOKEN_TYPE: Literal["access", "refresh", "both"] = "both"
+
     # MFA配置
     MFA_REQUIRED: bool = True  # 生产环境强制MFA
     MFA_ISSUER_NAME: str = "FastXAI-MFA"
+    MFA_ISSUER: str = "YourApp"
+    MFA_RATE_LIMIT: int = 5    # 每分钟最大尝试次数
+    MFA_BACKUP_CODES: int = 10 # 备份代码数量
+    MFA_VALID_WINDOW: int = 1  # TOTP验证窗口（±30秒，避免网络延迟）
+    MFA_MAX_FAILED_ATTEMPTS: int = 5  # 最大失败次数
+    MFA_LOCK_DURATION_MINUTES: int = 15  # 锁定时长（分钟）
     
     # 密码策略（企业级强化）
     PASSWORD_MIN_LENGTH: int = 9
