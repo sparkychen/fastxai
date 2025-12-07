@@ -190,3 +190,119 @@ class MFAEnrollmentManager:
             'backup_codes': backup_codes,
             'manual_entry_key': secret  # 用于手动输入
         }
+    
+
+import base64
+import pyotp
+import qrcode
+from io import BytesIO
+from typing import List, Tuple
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from fastapi import HTTPException, status
+from app.config import settings
+from app.db.session import get_db
+from app.db.models import User
+from sqlalchemy.orm import Session
+
+class MFAService2:
+
+    def __init__(self):
+        self._key = self._generate_key()
+        self._fernet = Fernet(self._key)
+        self._cache = None  # 由依赖注入设置
+
+    def _generate_key(self) -> bytes:
+        """生成加密密钥（使用 MFA_SECRET_KEY）"""
+        salt = b"mfa_salt"
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        return base64.urlsafe_b64encode(kdf.derive(settings.MFA_SECRET_KEY.encode()))
+
+    def generate_secret(self) -> str:
+        """生成安全的 MFA 密钥"""
+        return pyotp.random_base32()
+
+    def encrypt_secret(self, secret: str) -> str:
+        """加密 MFA 密钥"""
+        return self._fernet.encrypt(secret.encode()).decode()
+
+    def decrypt_secret(self, encrypted_secret: str) -> str:
+        """解密 MFA 密钥"""
+        return self._fernet.decrypt(encrypted_secret.encode()).decode()
+
+    def generate_qr_code(self, user_email: str, secret: str) -> bytes:
+        """生成 MFA 二维码（企业级安全）"""
+        totp = pyotp.TOTP(secret)
+        uri = totp.provisioning_uri(
+            name=user_email,
+            issuer_name="YourApp",
+            encoding="base32"
+        )
+      
+        # 生成高质量二维码
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(uri)
+        qr.make(fit=True)        
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    def generate_backup_codes(self) -> List[str]:
+        """生成一次性备份码（企业级）"""
+        return [pyotp.random_base32(8) for _ in range(settings.MFA_BACKUP_CODES_COUNT)]
+
+
+    async def verify_code(self, user: User, code: str) -> bool:
+        """验证 MFA 代码（高性能异步）"""
+        if not user.mfa_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="MFA is not enabled for this account"
+            )       
+
+        try:
+            # 从缓存获取或解密密钥
+            encrypted_secret = user.mfa_secret
+            secret = self.decrypt_secret(encrypted_secret)            
+
+            # 验证代码（使用时间窗口）
+            return pyotp.TOTP(secret).verify(
+                code,
+                valid_window=settings.MFA_TOTP_WINDOW
+            )
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid MFA code"
+            )
+
+    async def setup_mfa(self, user: User, db: Session) -> Tuple[bytes, List[str]]:
+        """设置 MFA（企业级安全）"""
+        secret = self.generate_secret()
+        encrypted_secret = self.encrypt_secret(secret)
+        # 生成备份码
+        backup_codes = self.generate_backup_codes()
+        # 保存到数据库（加密存储）
+        user.mfa_secret = encrypted_secret
+        user.mfa_enabled = True
+        user.mfa_backup_codes = self.encrypt_secret("|".join(backup_codes))
+        db.commit()      
+
+        # 生成二维码
+        qr_code = self.generate_qr_code(user.email, secret)
+        return qr_code, backup_codes
