@@ -12,7 +12,7 @@ from redis.asyncio import Redis, RedisCluster
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.models.database import User, MFABackupCode
+from app.models.mfa_user import User, MFABackupCode
 from passlib.context import CryptContext
 from app.core.config import settings
 # 初始化日志
