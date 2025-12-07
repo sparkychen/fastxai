@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [f"http://{APP_HOST}:{APP_PORT}", f"http://localhost:{APP_PORT}"]
 
     DEBUG: bool = False
-
+    
     # 主库（写）DSN
     DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
     DB_READ_DSNS: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]

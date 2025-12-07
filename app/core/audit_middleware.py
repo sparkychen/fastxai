@@ -5,7 +5,7 @@ import structlog
 from typing import Optional, Dict, Any
 from fastapi import Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-import uuid
+from uuid_extensions import uuid7
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.logger import audit_logger
@@ -28,7 +28,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
     """
     async def dispatch(self, request: Request, call_next) -> Response:
         # ========== 1. 初始化请求上下文 ==========
-        request_id = str(uuid.uuid4())
+        request_id = str(uuid7())
         start_time = time.time()
         # 绑定基础上下文
         bind_contextvars(

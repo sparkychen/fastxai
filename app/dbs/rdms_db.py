@@ -11,11 +11,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker, AsyncEngine
 from functools import lru_cache, wraps
 from sqlalchemy import MetaData, text
-import structlog
 import orjson
 import random
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger("db_manager")
+logger = setup_strcutlogger()
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_N_name)s",

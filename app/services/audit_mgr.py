@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import uuid
+import os
+from uuid_extensions import uuid7
 from datetime import datetime
 from app.models.audit import AuditEvent, AuditEventSeverity, AuditLog, AuditEventType
 from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
-import structlog
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
 
 class AuditService:
     """审计服务"""
@@ -46,7 +47,7 @@ class AuditService:
             # 如果启用了审计日志且提供了数据库会话，则保存到数据库
             if settings.ENABLE_SECURITY_AUDIT and self.db_session:
                 audit_log = AuditLog(
-                    id=str(uuid.uuid4()),
+                    id=str(uuid7()),
                     timestamp=datetime.utcnow(),
                     event_type=event.event_type,
                     severity=event.severity,

@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 # doubao
 
+import os 
 from typing import List, Dict, Any, Optional
 import asyncio
-import aioredis
+from redis.asyncio import Redis, RedisCluster, RedisError
 import asyncpg
-# import structlog
+import orjson
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-# from app.core.co_config import audit_settings
-from app.core.audit import sign_audit_log
+from app.core.audit_log import sign_audit_log
 from app.core.logger import audit_logger
+from app.core.config import settings
+from uuid_extensions import uuid7
 
 # ========== 存储抽象基类 ==========
 class AuditStorage:
@@ -33,43 +35,43 @@ class AuditStorage:
 # ========== Redis存储（热数据/批量缓存） ==========
 class RedisAuditStorage(AuditStorage):
     def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[Redis] = None
         self.batch_queue: List[Dict[str, Any]] = []
         self.batch_lock = asyncio.Lock()
         self.batch_task: Optional[asyncio.Task] = None
 
     async def init(self):
         """初始化Redis连接"""
-        self.redis = aioredis.from_url(
-            audit_settings.REDIS_URL,
+        self.redis = Redis.from_url(
+            settings.REDIS_URL,
             encoding="utf-8",
             decode_responses=False,
         )
         # 启动批量写入任务
-        if audit_settings.AUDIT_LOG_BATCH_ENABLE:
+        if settings.AUDIT_LOG_BATCH_ENABLE:
             self.batch_task = asyncio.create_task(self.batch_worker())
         audit_logger.info("Redis audit storage initialized")
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type((aioredis.RedisError, asyncio.TimeoutError)),
+        retry=retry_if_exception_type((RedisError, asyncio.TimeoutError)),
         reraise=True,
     )
     async def write(self, log_data: Dict[str, Any]):
         """异步写入Redis（批量/单条）"""
-        if audit_settings.AUDIT_LOG_BATCH_ENABLE:
+        if settings.AUDIT_LOG_BATCH_ENABLE:
             async with self.batch_lock:
                 self.batch_queue.append(log_data)
                 # 达到批量阈值则立即触发写入
-                if len(self.batch_queue) >= audit_settings.AUDIT_LOG_BATCH_SIZE:
+                if len(self.batch_queue) >= settings.AUDIT_LOG_BATCH_SIZE:
                     await self._flush_batch()
         else:
             # 单条写入
             log_data["signature"] = sign_audit_log(log_data)
             await self.redis.rpush(
-                audit_settings.REDIS_AUDIT_KEY,
-                json.dumps(log_data, default=str).encode()
+                settings.REDIS_AUDIT_KEY,
+                orjson.dumps(log_data, default=str).encode()
             )
 
     async def batch_write(self, logs: List[Dict[str, Any]]):
@@ -83,8 +85,8 @@ class RedisAuditStorage(AuditStorage):
         
         # 批量写入
         await self.redis.rpush(
-            audit_settings.REDIS_AUDIT_KEY,
-            *[json.dumps(log, default=str).encode() for log in logs]
+            settings.AUDIT_LOG_REDIS_KEY,
+            *[orjson.dumps(log, default=str).encode() for log in logs]
         )
         audit_logger.info("Batch logs written to Redis", count=len(logs))
 
@@ -92,7 +94,7 @@ class RedisAuditStorage(AuditStorage):
         """批量写入工作线程（定时+阈值）"""
         while True:
             try:
-                await asyncio.sleep(audit_settings.AUDIT_LOG_BATCH_INTERVAL)
+                await asyncio.sleep(settings.AUDIT_LOG_BATCH_INTERVAL)
                 async with self.batch_lock:
                     if self.batch_queue:
                         await self.batch_write(self.batch_queue)
@@ -134,10 +136,10 @@ class PostgresAuditStorage(AuditStorage):
         # 从环境变量获取PostgreSQL配置（复用数据库配置）
         self.pool = await asyncpg.create_pool(
             user=os.getenv("POSTGRES_USER", "postgres"),
-            password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgresAdmin"),
             host=os.getenv("POSTGRES_HOST", "localhost"),
             port=int(os.getenv("POSTGRES_PORT", 5432)),
-            database=os.getenv("POSTGRES_DB", "enterprise_db"),
+            database=os.getenv("POSTGRES_DB", "fastxai"),
             min_size=5,
             max_size=20,
             command_timeout=30,
@@ -145,11 +147,11 @@ class PostgresAuditStorage(AuditStorage):
         # 创建审计日志表（首次初始化）
         await self._create_audit_table()
         audit_logger.info("PostgreSQL audit storage initialized")
-
+    
     async def _create_audit_table(self):
         """创建审计日志表（企业级结构）"""
         create_sql = f"""
-        CREATE TABLE IF NOT EXISTS {audit_settings.POSTGRES_AUDIT_TABLE} (
+        CREATE TABLE IF NOT EXISTS {settings.POSTGRES_AUDIT_TABLE} (
             audit_id UUID PRIMARY KEY,
             timestamp TIMESTAMPTZ NOT NULL,
             user_id UUID,
@@ -172,10 +174,10 @@ class PostgresAuditStorage(AuditStorage):
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
         -- 创建索引（优化查询性能）
-        CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON {audit_settings.POSTGRES_AUDIT_TABLE}(timestamp);
-        CREATE INDEX IF NOT EXISTS idx_audit_user_id ON {audit_settings.POSTGRES_AUDIT_TABLE}(user_id);
-        CREATE INDEX IF NOT EXISTS idx_audit_resource ON {audit_settings.POSTGRES_AUDIT_TABLE}(resource_type, resource_id);
-        CREATE INDEX IF NOT EXISTS idx_audit_operation ON {audit_settings.POSTGRES_AUDIT_TABLE}(operation);
+        CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON {settings.POSTGRES_AUDIT_TABLE}(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_audit_user_id ON {settings.POSTGRES_AUDIT_TABLE}(user_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_resource ON {settings.POSTGRES_AUDIT_TABLE}(resource_type, resource_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_operation ON {settings.POSTGRES_AUDIT_TABLE}(operation);
         """
         async with self.pool.acquire() as conn:
             await conn.execute(create_sql)
@@ -196,7 +198,7 @@ class PostgresAuditStorage(AuditStorage):
         
         # 插入SQL
         insert_sql = f"""
-        INSERT INTO {audit_settings.POSTGRES_AUDIT_TABLE} (
+        INSERT INTO {settings.POSTGRES_AUDIT_TABLE} (
             audit_id, timestamp, user_id, user_name, operation, resource_type,
             resource_id, request_ip, request_method, request_path, request_params,
             request_body, response_status, response_time, status, error_msg,
@@ -225,14 +227,14 @@ class PostgresAuditStorage(AuditStorage):
                 log_data.get("status"),
                 log_data.get("error_msg"),
                 log_data.get("signature"),
-                audit_settings.APP_NAME,
-                audit_settings.ENVIRONMENT,
+                settings.APP_NAME,
+                settings.ENVIRONMENT,
             )
 
     async def batch_write(self, logs: List[Dict[str, Any]]):
         """批量写入PostgreSQL（高性能）"""
         if not logs or not self.pool:
-            return
+            return sign_audit_log
         
         # 准备批量数据
         batch_data = []
@@ -256,15 +258,15 @@ class PostgresAuditStorage(AuditStorage):
                 log.get("status"),
                 log.get("error_msg"),
                 log.get("signature"),
-                audit_settings.APP_NAME,
-                audit_settings.ENVIRONMENT,
+                settings.APP_NAME,
+                settings.ENVIRONMENT,
             ))
         
         # 批量插入
         async with self.pool.acquire() as conn:
             await conn.executemany(
                 f"""
-                INSERT INTO {audit_settings.POSTGRES_AUDIT_TABLE} (
+                INSERT INTO {settings.POSTGRES_AUDIT_TABLE} (
                     audit_id, timestamp, user_id, user_name, operation, resource_type,
                     resource_id, request_ip, request_method, request_path, request_params,
                     request_body, response_status, response_time, status, error_msg,
@@ -281,98 +283,98 @@ class PostgresAuditStorage(AuditStorage):
             await self.pool.close()
         audit_logger.info("PostgreSQL audit storage closed")
 
-# ========== ES存储（可选，检索优化） ==========
-class ESAuditStorage(AuditStorage):
-    def __init__(self):
-        self.es: Optional[AsyncElasticsearch] = None
+# # ========== ES存储（可选，检索优化） ==========
+# class ESAuditStorage(AuditStorage):
+#     def __init__(self):
+#         self.es: Optional[AsyncElasticsearch] = None
 
-    async def init(self):
-        """初始化ES连接"""
-        self.es = AsyncElasticsearch([audit_settings.ES_URL])
-        # 创建索引（如果不存在）
-        await self._create_es_index()
-        audit_logger.info("ES audit storage initialized")
+#     async def init(self):
+#         """初始化ES连接"""
+#         self.es = AsyncElasticsearch([audit_settings.ES_URL])
+#         # 创建索引（如果不存在）
+#         await self._create_es_index()
+#         audit_logger.info("ES audit storage initialized")
 
-    async def _create_es_index(self):
-        """创建ES索引（结构化+分词）"""
-        index_settings = {
-            "settings": {
-                "number_of_shards": 3,
-                "number_of_replicas": 1,
-                "refresh_interval": "5s"  # 性能优化：5秒刷新
-            },
-            "mappings": {
-                "properties": {
-                    "audit_id": {"type": "keyword"},
-                    "timestamp": {"type": "date"},
-                    "user_id": {"type": "keyword"},
-                    "user_name": {"type": "keyword"},
-                    "operation": {"type": "keyword"},
-                    "resource_type": {"type": "keyword"},
-                    "resource_id": {"type": "keyword"},
-                    "request_ip": {"type": "ip"},
-                    "request_method": {"type": "keyword"},
-                    "request_path": {"type": "keyword"},
-                    "request_params": {"type": "object"},
-                    "request_body": {"type": "object"},
-                    "response_status": {"type": "integer"},
-                    "response_time": {"type": "float"},
-                    "status": {"type": "keyword"},
-                    "error_msg": {"type": "text"},
-                    "signature": {"type": "keyword"},
-                    "app_name": {"type": "keyword"},
-                    "environment": {"type": "keyword"},
-                }
-            }
-        }
-        if not await self.es.indices.exists(index=audit_settings.ES_AUDIT_INDEX):
-            await self.es.indices.create(
-                index=audit_settings.ES_AUDIT_INDEX,
-                body=index_settings
-            )
+#     async def _create_es_index(self):
+#         """创建ES索引（结构化+分词）"""
+#         index_settings = {
+#             "settings": {
+#                 "number_of_shards": 3,
+#                 "number_of_replicas": 1,
+#                 "refresh_interval": "5s"  # 性能优化：5秒刷新
+#             },
+#             "mappings": {
+#                 "properties": {
+#                     "audit_id": {"type": "keyword"},
+#                     "timestamp": {"type": "date"},
+#                     "user_id": {"type": "keyword"},
+#                     "user_name": {"type": "keyword"},
+#                     "operation": {"type": "keyword"},
+#                     "resource_type": {"type": "keyword"},
+#                     "resource_id": {"type": "keyword"},
+#                     "request_ip": {"type": "ip"},
+#                     "request_method": {"type": "keyword"},
+#                     "request_path": {"type": "keyword"},
+#                     "request_params": {"type": "object"},
+#                     "request_body": {"type": "object"},
+#                     "response_status": {"type": "integer"},
+#                     "response_time": {"type": "float"},
+#                     "status": {"type": "keyword"},
+#                     "error_msg": {"type": "text"},
+#                     "signature": {"type": "keyword"},
+#                     "app_name": {"type": "keyword"},
+#                     "environment": {"type": "keyword"},
+#                 }
+#             }
+#         }
+#         if not await self.es.indices.exists(index=audit_settings.ES_AUDIT_INDEX):
+#             await self.es.indices.create(
+#                 index=audit_settings.ES_AUDIT_INDEX,
+#                 body=index_settings
+#             )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type((Exception,)),
-        reraise=True,
-    )
-    async def write(self, log_data: Dict[str, Any]):
-        """写入单条日志到ES"""
-        if not self.es:
-            return
+#     @retry(
+#         stop=stop_after_attempt(3),
+#         wait=wait_exponential(multiplier=1, min=1, max=5),
+#         retry=retry_if_exception_type((Exception,)),
+#         reraise=True,
+#     )
+#     async def write(self, log_data: Dict[str, Any]):
+#         """写入单条日志到ES"""
+#         if not self.es:
+#             return
         
-        log_data["signature"] = sign_audit_log(log_data)
-        await self.es.index(
-            index=audit_settings.ES_AUDIT_INDEX,
-            id=log_data["audit_id"],
-            body=log_data
-        )
+#         log_data["signature"] = sign_audit_log(log_data)
+#         await self.es.index(
+#             index=audit_settings.ES_AUDIT_INDEX,
+#             id=log_data["audit_id"],
+#             body=log_data
+#         )
 
-    async def batch_write(self, logs: List[Dict[str, Any]]):
-        """批量写入ES"""
-        if not logs or not self.es:
-            return
+#     async def batch_write(self, logs: List[Dict[str, Any]]):
+#         """批量写入ES"""
+#         if not logs or not self.es:
+#             return
         
-        bulk_operations = []
-        for log in logs:
-            log["signature"] = sign_audit_log(log)
-            bulk_operations.append({
-                "index": {
-                    "_index": audit_settings.ES_AUDIT_INDEX,
-                    "_id": log["audit_id"]
-                }
-            })
-            bulk_operations.append(log)
+#         bulk_operations = []
+#         for log in logs:
+#             log["signature"] = sign_audit_log(log)
+#             bulk_operations.append({
+#                 "index": {
+#                     "_index": audit_settings.ES_AUDIT_INDEX,
+#                     "_id": log["audit_id"]
+#                 }
+#             })
+#             bulk_operations.append(log)
         
-        await self.es.bulk(body=bulk_operations)
-        audit_logger.info("Batch logs written to ES", count=len(logs))
+#         await self.es.bulk(body=bulk_operations)
+#         audit_logger.info("Batch logs written to ES", count=len(logs))
 
-    async def close(self):
-        """关闭ES连接"""
-        if self.es:
-            await self.es.close()
-        audit_logger.info("ES audit storage closed")
+#     async def close(self):
+#         """关闭ES连接"""
+#         if self.es:
+#             await self.es.close()
+#         audit_logger.info("ES audit storage closed")
 
 # ========== 多存储聚合服务 ==========
 class AuditLogService:
@@ -388,17 +390,17 @@ class AuditLogService:
                 return
             
             # 根据配置初始化存储
-            if "redis" in audit_settings.AUDIT_LOG_STORAGE_BACKENDS:
+            if "redis" in settings.AUDIT_LOG_STORAGE_BACKENDS:
                 redis_storage = RedisAuditStorage()
                 await redis_storage.init()
                 self.storages.append(redis_storage)
             
-            if "postgres" in audit_settings.AUDIT_LOG_STORAGE_BACKENDS:
+            if "postgres" in settings.AUDIT_LOG_STORAGE_BACKENDS:
                 pg_storage = PostgresAuditStorage()
                 await pg_storage.init()
                 self.storages.append(pg_storage)
             
-            if "es" in audit_settings.AUDIT_LOG_STORAGE_BACKENDS:
+            if "es" in settings.AUDIT_LOG_STORAGE_BACKENDS:
                 es_storage = ESAuditStorage()
                 await es_storage.init()
                 self.storages.append(es_storage)
@@ -408,16 +410,16 @@ class AuditLogService:
     async def write_audit_log(self, log_data: Dict[str, Any]):
         """写入审计日志（多存储）"""
         # 补充必选字段
-        log_data.setdefault("audit_id", str(uuid.uuid4()))
-        log_data.setdefault("app_name", audit_settings.APP_NAME)
-        log_data.setdefault("environment", audit_settings.ENVIRONMENT)
+        log_data.setdefault("audit_id", str(uuid7()))
+        log_data.setdefault("app_name", settings.APP_NAME)
+        log_data.setdefault("environment", settings.ENV)
         
         # 验证必选字段
-        missing_fields = [f for f in audit_settings.AUDIT_LOG_MANDATORY_FIELDS if f not in log_data]
+        missing_fields = [f for f in settings.AUDIT_LOG_MANDATORY_FIELDS if f not in log_data]
         if missing_fields:
             audit_logger.error("Missing mandatory audit fields", missing=missing_fields)
             # 开发环境抛出异常，生产环境仅记录
-            if audit_settings.ENVIRONMENT != "production":
+            if settings.ENVIRONMENT != "prod":
                 raise ValueError(f"Missing mandatory audit fields: {missing_fields}")
         
         # 异步写入所有存储（无阻塞）
@@ -448,7 +450,7 @@ class AuditLogService:
         """本地文件兜底写入（防止日志丢失）"""
         fallback_path = LOG_DIR / "audit_fallback.log"
         with open(fallback_path, "a", encoding="utf-8") as f:
-            f.write(f"{json.dumps(log_data, default=str)}\n")
+            f.write(f"{orjson.dumps(log_data, default=str)}\n")
         audit_logger.warning("Audit log fallback to file", audit_id=log_data.get("audit_id"))
 
     async def close(self):

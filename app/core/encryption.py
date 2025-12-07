@@ -4,21 +4,30 @@ import os
 from typing import Any, Dict, Optional
 from cryptography.fernet import Fernet, MultiFernet
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
-import json
+import orjson
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import TypeDecorator, String
-import structlog
+from app.core.config import settings
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
+import re
+from pydantic import field_validator, ValidationInfo
+from pydantic_core import PydanticCustomError
+# 初始化日志
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
 
 class DataEncryptor:
     """数据加密器"""
     
     def __init__(self, encryption_key: Optional[str] = None):
-        self.encryption_key = encryption_key or security_settings.ENCRYPTION_KEY
+        self.encryption_key = encryption_key or settings.ENCRYPTION_KEY
         
         # 生成密钥派生
         kdf = PBKDF2HMAC(
@@ -39,7 +48,7 @@ class DataEncryptor:
         
         # 序列化数据
         if isinstance(data, (dict, list)):
-            data_str = json.dumps(data)
+            data_str = orjson.dumps(data)
         else:
             data_str = str(data)
         
@@ -64,8 +73,8 @@ class DataEncryptor:
             
             # 尝试反序列化JSON
             try:
-                return json.loads(decrypted_str)
-            except json.JSONDecodeError:
+                return orjson.loads(decrypted_str)
+            except orjson.JSONDecodeError:
                 return decrypted_str
         
         except Exception as e:
@@ -240,13 +249,11 @@ class DatabaseEncryptionService:
                             UPDATE {table_name}
                             SET {set_clause}
                             WHERE id = :record_id
-                        """)
-                        
+                        """)                        
                         params = update_values.copy()
                         params['record_id'] = record_id
                         
-                        await self.db_session.execute(update_query, params)
-                
+                        await self.db_session.execute(update_query, params)                
                 await self.db_session.commit()
                 offset += batch_size
                 
@@ -255,8 +262,7 @@ class DatabaseEncryptionService:
                     offset=offset
                 )
             
-            logger.info(f"Table {table_name} encryption completed")
-        
+            logger.info(f"Table {table_name} encryption completed")        
         except Exception as e:
             logger.error(f"Failed to batch encrypt table {table_name}", error=str(e))
             await self.db_session.rollback()
@@ -268,11 +274,9 @@ class DatabaseEncryptionService:
                 return False
             
             # 尝试Base64解码
-            decoded = base64.urlsafe_b64decode(value)
-            
+            decoded = base64.urlsafe_b64decode(value)            
             # 检查是否为有效的加密数据
-            return len(decoded) > 0
-        
+            return len(decoded) > 0        
         except Exception:
             return False
     
@@ -284,8 +288,126 @@ class DatabaseEncryptionService:
         # 这里可以实现密钥轮换逻辑
         # 1. 使用新密钥重新加密所有数据
         # 2. 更新密钥存储
-        # 3. 废弃旧密钥
-        
-        logger.info("Encryption key rotation initiated")
-        
+        # 3. 废弃旧密钥        
+        logger.info("Encryption key rotation initiated")        
         return new_encryptor
+    
+
+# ================= 1. 对称加密（AES-256-GCM） =================
+class AESCrypto:
+    """AES-256-GCM加密（支持认证和完整性校验）"""
+    def __init__(self):
+        self.key = settings.ENCRYPTION_KEY
+        self.backend = default_backend()
+
+    def encrypt(self, plaintext: str) -> str:
+        """加密明文（返回base64编码的密文+nonce+tag）"""
+        # 生成随机nonce（12字节）
+        nonce = os.urandom(12)
+        # 创建加密器
+        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce), backend=self.backend)
+        encryptor = cipher.encryptor()
+        # 加密
+        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+        # 获取认证标签
+        tag = encryptor.tag
+        # 拼接nonce + tag + ciphertext，base64编码
+        encrypted = base64.b64encode(nonce + tag + ciphertext).decode()
+        return encrypted
+
+    def decrypt(self, ciphertext: str) -> str:
+        """解密密文"""
+        try:
+            # 解码
+            data = base64.b64decode(ciphertext)
+            # 拆分nonce(12) + tag(16) + ciphertext
+            nonce = data[:12]
+            tag = data[12:28]
+            ciphertext = data[28:]
+            # 创建解密器
+            cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce, tag), backend=self.backend)
+            decryptor = cipher.decryptor()
+            # 解密
+            plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+            return plaintext.decode()
+        except Exception as e:
+            logger.error("AES decryption failed", error=str(e))
+            raise ValueError("Invalid ciphertext or key")
+
+# ================= 2. 数据脱敏 =================
+class DataMasker:
+    """敏感数据脱敏"""
+    @staticmethod
+    def mask_field(field_name: str, value: Any) -> Any:
+        """根据字段名脱敏"""
+        if field_name not in settings.SENSITIVE_FIELDS or not value:
+            return value
+        
+        value_str = str(value)
+        
+        # 邮箱脱敏：user***@domain.com
+        if field_name == "email":
+            match = re.match(r"^(.+?)@(.+)$", value_str)
+            if match:
+                return f"{match.group(1)[:3]}***@{match.group(2)}"
+        
+        # 手机号脱敏：138****1234
+        elif field_name == "phone":
+            if len(value_str) == 11:
+                return f"{value_str[:3]}****{value_str[-4:]}"
+        
+        # 身份证脱敏：110**********1234
+        elif field_name == "id_card":
+            if len(value_str) == 18:
+                return f"{value_str[:3]}**********{value_str[-4:]}"
+        
+        # 银行卡脱敏：6226****1234
+        elif field_name == "bank_card":
+            if len(value_str) >= 8:
+                return f"{value_str[:4]}****{value_str[-4:]}"
+        
+        # 通用脱敏：保留前3后2，中间替换
+        else:
+            if len(value_str) > 5:
+                return f"{value_str[:3]}{settings.DATA_MASKING_CHAR * (len(value_str)-5)}{value_str[-2:]}"
+            else:
+                return settings.DATA_MASKING_CHAR * len(value_str)
+
+    @staticmethod
+    def mask_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+        """脱敏字典中的敏感字段"""
+        masked = {}
+        for key, value in data.items():
+            masked[key] = DataMasker.mask_field(key, value)
+        return masked
+
+# ================= 3. 输入验证（增强Pydantic） =================
+
+
+def validate_sensitive_input(value: str, field_name: str) -> str:
+    """验证敏感输入（防注入）"""
+    # 防SQL注入基础规则
+    sql_injection_patterns = [
+        r"('|\").*;.*(DROP|ALTER|INSERT|SELECT|UPDATE|DELETE)",
+        r"OR\s+1=1",
+        r"UNION\s+SELECT",
+    ]
+    for pattern in sql_injection_patterns:
+        if re.search(pattern, value, re.IGNORECASE):
+            raise PydanticCustomError(
+                "invalid_input",
+                f"Invalid input for {field_name}: potential SQL injection"
+            )
+    # 防XSS基础规则
+    xss_patterns = [r"<script.*?>.*?</script>", r"javascript:", r"onload=", r"onclick="]
+    for pattern in xss_patterns:
+        if re.search(pattern, value, re.IGNORECASE):
+            raise PydanticCustomError(
+                "invalid_input",
+                f"Invalid input for {field_name}: potential XSS attack"
+            )
+    return value
+
+# 初始化工具
+aes_crypto = AESCrypto()
+data_masker = DataMasker()

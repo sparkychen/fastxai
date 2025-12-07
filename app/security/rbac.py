@@ -4,12 +4,11 @@ from typing import List, Set, Callable, Optional
 from functools import wraps
 from fastapi import HTTPException, status, Depends
 from enum import Enum
-import structlog
-
 from .auth import auth_service
 from app.models.user import User
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
 
 class Permission(str, Enum):
     """系统权限枚举"""

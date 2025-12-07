@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-# doubao
 
-import uuid
+# doubao
+import orjson
+from uuid_extensions import uuid7
 import hashlib
 import hmac
 import re
@@ -70,7 +71,7 @@ def sign_audit_log(log_data: Dict[str, Any]) -> str:
         if k not in ["signature", "error_msg"]  # 排除可变字段
     ])
     # 序列化签名内容
-    sign_content = json.dumps(sign_fields, sort_keys=True, default=str).encode()
+    sign_content = orjson.dumps(sign_fields, sort_keys=True, default=str).encode()
     # 生成HMAC签名
     signature = hmac.new(
         settings.AUDIT_LOG_SIGN_SECRET,

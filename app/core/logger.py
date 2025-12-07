@@ -130,13 +130,6 @@ from structlog.contextvars import bind_contextvars, clear_contextvars, merge_con
 #         log_level = logging.INFO if status == AuditResultStatus.SUCCESS else logging.WARNING
 #         self._logger.log(log_level, "audit_event", **audit_record)
 
-def _orjson_renderer(
-    logger: logging.Logger,
-    name: str,
-    event_dict: Dict[str, Any],
-) -> bytes:
-    """高性能 JSON 渲染器（使用 orjson）"""
-    return orjson.dumps(event_dict, option=orjson.OPT_APPEND_NEWLINE)
 
 class SensitiveFilter:
     def __init__(self, sensitive_fields):
@@ -153,7 +146,7 @@ class SensitiveFilter:
 
         # 企业级：过滤响应体中的敏感字段
         if "response" in event_dict and "body" in event_dict["response"]:
-            body = event_dict["response"]["body"]from structlog.contextvars import bind_contextvars, clear_contextvars, merge_contextvars
+            body = event_dict["response"]["body"]
             if isinstance(body, dict):
                 for field in self.sensitive_fields:
                     if field in body:
@@ -206,6 +199,7 @@ def setup_strcutlogger():
             structlog.processors.KeyValueRenderer(key_order=["timestamp", "level", "event", "request_id", "user_id"]),
             SensitiveFilter(sensitive_fields=settings.AUDIT_LOG_SENSITIVE_FIELDS),
             structlog.stdlib.filter_by_level,
+            structlog.processors.JSONRenderer(),
         ],
         context_processors=[
             structlog.processors.TimeStamper(fmt="iso"),

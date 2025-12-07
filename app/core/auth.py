@@ -12,15 +12,15 @@ from fastapi.security import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as redis
-from uuid import uuid4
-import structlog
-
-from .sc_config import security_settings
-from ..config.database import get_db
+from uuid_extensions import uuid7
+from .config import settings
+from ..config import get_db
 from ..domain.models.user import User
 from ..domain.repositories.user import UserRepository
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
+
 pwd_context = CryptContext(
     schemes=["argon2", "bcrypt"], 
     deprecated="auto",
@@ -48,8 +48,8 @@ class AdvancedAuthService:
         self.redis_client = redis.from_url(
             "redis://localhost:6379",
             decode_responses=True,
-            ssl=security_settings.REDIS_SECURE_CONNECTION,
-            ssl_cert_reqs="required" if security_settings.REDIS_SSL_VERIFY else "none"
+            ssl=settings.REDIS_SECURE_CONNECTION,
+            ssl_cert_reqs="required" if settings.REDIS_SSL_VERIFY else "none"
         )
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -62,14 +62,14 @@ class AdvancedAuthService:
     
     def validate_password_policy(self, password: str) -> bool:
         """验证密码策略"""
-        if len(password) < security_settings.PASSWORD_MIN_LENGTH:
+        if len(password) < settings.PASSWORD_MIN_LENGTH:
             return False
         
         checks = {
-            'uppercase': security_settings.PASSWORD_REQUIRE_UPPERCASE,
-            'lowercase': security_settings.PASSWORD_REQUIRE_LOWERCASE,
-            'digits': security_settings.PASSWORD_REQUIRE_DIGITS,
-            'special': security_settings.PASSWORD_REQUIRE_SPECIAL,
+            'uppercase': settings.PASSWORD_REQUIRE_UPPERCASE,
+            'lowercase': settings.PASSWORD_REQUIRE_LOWERCASE,
+            'digits': settings.PASSWORD_REQUIRE_DIGITS,
+            'special': settings.PASSWORD_REQUIRE_SPECIAL,
         }
         
         if checks['uppercase'] and not any(c.isupper() for c in password):
@@ -104,7 +104,7 @@ class AdvancedAuthService:
         
         history_key = f"password_history:{user_id}"
         await self.redis_client.lpush(history_key, password_hash)
-        await self.redis_client.ltrim(history_key, 0, security_settings.PASSWORD_HISTORY_SIZE - 1)
+        await self.redis_client.ltrim(history_key, 0, settings.PASSWORD_HISTORY_SIZE - 1)
     
     async def check_login_attempts(self, user_id: str) -> bool:
         """检查登录尝试次数"""
@@ -114,7 +114,7 @@ class AdvancedAuthService:
         attempts_key = f"login_attempts:{user_id}"
         attempts = await self.redis_client.get(attempts_key)
         
-        if attempts and int(attempts) >= security_settings.MAX_LOGIN_ATTEMPTS:
+        if attempts and int(attempts) >= settings.MAX_LOGIN_ATTEMPTS:
             lockout_key = f"account_lockout:{user_id}"
             lockout_time = await self.redis_client.get(lockout_key)
             
@@ -122,7 +122,7 @@ class AdvancedAuthService:
                 # 锁定账户
                 await self.redis_client.setex(
                     lockout_key,
-                    security_settings.ACCOUNT_LOCKOUT_MINUTES * 60,
+                    settings.ACCOUNT_LOCKOUT_MINUTES * 60,
                     str(datetime.utcnow())
                 )
                 logger.warning("Account locked due to too many failed attempts", user_id=user_id)
@@ -163,7 +163,7 @@ class AdvancedAuthService:
             expire = datetime.utcnow() + expires_delta
         else:
             expire = datetime.utcnow() + timedelta(
-                minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES
+                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
             )
         
         to_encode = {
@@ -171,9 +171,9 @@ class AdvancedAuthService:
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "access",
-            "aud": security_settings.JWT_AUDIENCE,
-            "iss": security_settings.JWT_ISSUER,
-            "jti": str(uuid4()),
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
+            "jti": str(uuid7()),
             "scopes": scopes or ["read"],
             "user": {
                 "id": user_data.get("id"),
@@ -185,8 +185,8 @@ class AdvancedAuthService:
         
         encoded_jwt = jwt.encode(
             to_encode,
-            security_settings.JWT_SECRET_KEY,
-            algorithm=security_settings.JWT_ALGORITHM
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
         )
         
         # 记录令牌颁发
@@ -197,7 +197,7 @@ class AdvancedAuthService:
     def create_refresh_token(self, subject: str) -> str:
         """创建刷新令牌"""
         expire = datetime.utcnow() + timedelta(
-            days=security_settings.REFRESH_TOKEN_EXPIRE_DAYS
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
         
         to_encode = {
@@ -205,15 +205,15 @@ class AdvancedAuthService:
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "refresh",
-            "aud": security_settings.JWT_AUDIENCE,
-            "iss": security_settings.JWT_ISSUER,
-            "jti": str(uuid4()),
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
+            "jti": str(uuid7()),
         }
         
         encoded_jwt = jwt.encode(
             to_encode,
-            security_settings.JWT_SECRET_KEY,
-            algorithm=security_settings.JWT_ALGORITHM
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
         )
         
         return encoded_jwt
@@ -226,10 +226,10 @@ class AdvancedAuthService:
         try:
             payload = jwt.decode(
                 token,
-                security_settings.JWT_SECRET_KEY,
-                algorithms=[security_settings.JWT_ALGORITHM],
-                audience=security_settings.JWT_AUDIENCE,
-                issuer=security_settings.JWT_ISSUER
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
+                audience=settings.JWT_AUDIENCE,
+                issuer=settings.JWT_ISSUER
             )
             
             jti = payload.get("jti")
@@ -261,10 +261,10 @@ class AdvancedAuthService:
         try:
             payload = jwt.decode(
                 token,
-                security_settings.JWT_SECRET_KEY,
-                algorithms=[security_settings.JWT_ALGORITHM],
-                audience=security_settings.JWT_AUDIENCE,
-                issuer=security_settings.JWT_ISSUER
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
+                audience=settings.JWT_AUDIENCE,
+                issuer=settings.JWT_ISSUER
             )
             
             return payload

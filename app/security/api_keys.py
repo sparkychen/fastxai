@@ -8,13 +8,12 @@ import hmac
 import base64
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String, DateTime, Boolean, JSON
-import structlog
-
 from ..config.database import Base
 from .sc_config import security_settings
 from .auth import auth_service
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
 
 class APIKey(Base):
     """API密钥数据库模型"""

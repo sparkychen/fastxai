@@ -3,7 +3,7 @@ name = "fastxai"
 version = "0.1.0"
 description = "An multi-agents project with langchain(langgraph)1.0，realtime knowledge graph(graphiti-core), vector dbs and LLM..."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.13"
 authors = [{name="chenjunfeng", email="cjf_junfeng@163.com"}]
 
 classifiers = [
@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     "asyncpg==0.31.0",
-    "fastapi[standard]==0.123.10",
+    "fastapi[standard]==0.124.0",
     "fastapi-structlog==0.7.0",
     "fastapi-users==15.0.1",
     "uvicorn[standard]==0.38.0",

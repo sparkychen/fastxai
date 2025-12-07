@@ -1,27 +1,58 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, Request
 from datetime import datetime
-import structlog
 from app.security.middleware import SecurityMiddleware
 from app.security.monitoring import SecurityMonitoringService
-from app.security.audit import AuditService, get_audit_service
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from app.models.audit import AuditService, get_audit_service
+from app.core.config import settings
 from app.config.database import get_db
+import uvloop
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.structlog import StructlogIntegration
+from fastapi_structlog import init_logging, StructlogMiddleware, AccessLogMiddleware, CurrentScopeSetMiddleware
+from app.middleware.logging import RequestContextLoggingMiddleware
+from app.middleware.tracing import TracingMiddleware
+from app.core.handlers import http_exception_handler, generic_exception_handler
+from asgi_correlation_id import CorrelationIdMiddleware  # 需额外安装：pip install asgi-correlation-id
+from fastapi_structlog import StructLogMiddleware
+# 初始化日志
+from app.core.logger import setup_strcutlogger
 
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ]
+logger = setup_strcutlogger()
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
+# 在应用创建和中间件加载前初始化Sentry
+sentry_sdk.init(
+    dsn=settings.SENTRY_DSN,  # 关键！从Sentry项目获取的密钥
+    #dsn="https://your-dsn-here@sentry.io/123456", #初始化Sentry（生产环境必须配置DSN
+    integrations=[
+        FastApiIntegration(),  # 自动捕获FastAPI路由异常
+        StructlogIntegration(),  # 与structlog集成，将日志上下文带给Sentry事件
+    ],
+    # 企业级配置建议
+    traces_sample_rate=0.1,  # 性能监控采样率，1.0为100%。生产环境可调低以节省配额
+    environment=settings.ENV,  # 区分 "production", "staging", "development"
+    release="your-app-name@1.0.0",  # 关联代码版本，便于归因
+    send_default_pii=False,  # 是否发送用户个人身份信息，需根据隐私政策决定
 )
-logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    logger.info(
+        "Application started",
+        env=settings.ENV,
+        log_level=settings.LOG.LEVEL,
+        log_format=settings.LOG.FORMAT,
+        async_log=settings.LOG.ENABLE_ASYNC,
+    )
     # 启动
     logger.info("Starting security-enhanced application")
     
@@ -36,6 +67,13 @@ async def lifespan(app: FastAPI):
         # 存储到应用状态
         app.state.security_monitoring = security_monitoring
         app.state.audit_service = audit_service
+
+        # 健康检查
+        # db_health = await check_db_health()
+        # if db_health["status"] != "healthy":
+        #     logger.error("DB health check failed", health=db_health)
+        #     raise RuntimeError("Database initialization failed")
+        # logger.info("App initialized successfully", db_health=db_health)
     
     logger.info("Security services initialized")
     
@@ -45,19 +83,60 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down security services")
     await redis_client.close()
 
+    logger.info("Application shutting down")
+    # 等待异步日志处理器刷新
+    if settings.LOG.ENABLE_ASYNC:
+        from app.utils.async_logger import async_log_processor
+        await async_log_processor.flush() 
+        import time
+        time.sleep(settings.LOG.ASYNC_FLUSH_INTERVAL + 1)
+
 def create_secure_application() -> FastAPI:
     """创建安全加固的FastAPI应用"""
     app = FastAPI(
-        title="Secure Enterprise API",
+        title="FastXAI",
         version="2.0.0",
         lifespan=lifespan,
-        docs_url="/api/docs" if security_settings.DEBUG else None,
-        redoc_url="/api/redoc" if security_settings.DEBUG else None,
-        openapi_url="/api/openapi.json" if security_settings.DEBUG else None,
+        openapi_url="/api/openapi.json" if settings.DEBUG else None, # 生产环境禁用
+        docs_url="/docs" if settings.ENV != "prod" else None, # 生产环境禁用
+        redoc_url="/redoc" if settings.ENV != "prod" else None, # 生产环境禁用
     )
+
+    app.add_middleware(CurrentScopeSetMiddleware)  # 1. 设置上下文
+    app.add_middleware(
+        CorrelationIdMiddleware,
+        header_name="X-Request-ID",  # 可配置为任意头名称
+        # 可选：自定义ID生成器
+        # generator=lambda: uuid.uuid4().hex,
+    )    # 2. 生成请求ID
+    app.add_middleware(StructlogMiddleware)        # 3. 将请求ID注入日志上下文
+    app.add_middleware(AccessLogMiddleware)        # 4. 记录访问日志（格式可自定义[citation:1]）
+
+    # 1. CORS中间件
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["https://your-domain.com"],  # 生产环境严格限制
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+    # 2. GZip压缩（提升传输性能）
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # 3. 结构化日志中间件
+    app.add_middleware(StructuredLoggingMiddleware)
     
     # 设置安全中间件
     SecurityMiddleware.setup_security_middleware(app)
+
+    # 2. 分布式追踪中间件（先于日志中间件）
+    if settings.TRACING_ENABLE:
+        app.add_middleware(TracingMiddleware)
+    # 3. 请求上下文日志中间件（核心）
+    app.add_middleware(RequestContextLoggingMiddleware)
+
+    # ========== 3. 注册异常处理器 ==========
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(Exception, generic_exception_handler)
     
     # 添加安全路由
     from app.security.api_keys import validate_api_key
@@ -100,7 +179,64 @@ def create_secure_application() -> FastAPI:
             "count": len(alerts),
         }
     
+    @app.get("/health", tags=["health"])
+    async def health_check():
+        """健康检查接口（供K8s/监控使用）"""
+        # 检查数据库
+        db_healthy = True
+        try:
+            from app.core.db import get_db_manager
+            health = await get_db_manager().health_check()
+            db_healthy = health["status"] == "healthy"
+        except Exception:
+            db_healthy = False
+        # 检查Redis
+        redis_healthy = True
+        try:
+            redis = await get_redis_client()
+            await redis.ping()
+        except Exception:
+            redis_healthy = False
+        # 整体状态
+        overall_healthy = db_healthy and redis_healthy
+        return {
+            "status": "healthy" if overall_healthy else "unhealthy",
+            "database": db_healthy,
+            "redis": redis_healthy,
+            "env": settings.ENV
+        }
+    
+    def set_log_level(level: str):
+        """动态设置日志级别（生产环境可API调整）"""
+        level = level.upper()
+        if level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+            logger.setLevel(level)
+            return True
+
+        return False
+
+    @app.get("/admin/log-level")
+    async def set_log_level_api(level: str = "INFO"):
+        if set_log_level(level):
+            return {"status": "success", "level": level}
+        return {"status": "error", "message": "Invalid log level"}
+    
+    @app.get("/users/me")
+    async def read_users_me(request: Request, user: User = Depends(current_user)):
+        # 企业级：使用structlog记录
+        logger.info(
+            "User profile requested",
+            event="user_profile_request",
+            user_id=user.id,
+            username=user.username,
+            ip_address=request.client.host,
+            # 企业级：避免记录敏感信息
+            # password=user.password,  # 不要记录
+        )
+        return user
+        
     return app
+    
 
 # 创建应用
 app = create_secure_application()
@@ -110,9 +246,9 @@ if __name__ == "__main__":
     
     # 生产环境配置
     uvicorn_config = {
-        "host": security_settings.HOST,
-        "port": security_settings.PORT,
-        "reload": security_settings.DEBUG,
+        "host": settings.HOST,
+        "port": settings.PORT,
+        "reload": settings.DEBUG,
         "workers": 4,  # 多worker处理
         "proxy_headers": True,  # 支持代理头
         "forwarded_allow_ips": "*",  # 允许所有转发IP

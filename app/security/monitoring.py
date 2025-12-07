@@ -6,11 +6,11 @@ from typing import Dict, List, Optional, Set, Any
 from enum import Enum
 import redis.asyncio as redis
 from prometheus_client import Counter, Histogram, Gauge
-import structlog
 from app.core.config import settings
 from ..models.audit import AuditService, AuditEventType, AuditEventSeverity
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
+logger = setup_strcutlogger()
 
 # Prometheus指标
 SECURITY_EVENTS_TOTAL = Counter(

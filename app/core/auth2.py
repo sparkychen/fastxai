@@ -20,15 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
 from app.database.postgres import get_db
 from app.database.models.user import User, UserRole
-from app.security.sc_config import security_settings
-import structlog
+from app.core.config import settings
+# 初始化日志
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger()
-
+logger = setup_strcutlogger()
 # ================= 1. 密码哈希配置 =================
 pwd_context = CryptContext(
-    schemes=[security_settings.PASSWORD_HASH_ALGORITHM],
-    bcrypt__rounds=security_settings.PASSWORD_BCRYPT_ROUNDS,
+    schemes=[settings.PASSWORD_HASH_ALGORITHM],
+    bcrypt__rounds=settings.PASSWORD_BCRYPT_ROUNDS,
     deprecated="auto"
 )
 
@@ -36,9 +36,9 @@ pwd_context = CryptContext(
 def get_jwt_strategy() -> JWTStrategy:
     """自定义JWT策略（添加额外安全字段）"""
     return JWTStrategy(
-        secret=security_settings.SECRET_KEY,
-        lifetime_seconds=security_settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        algorithm=security_settings.JWT_ALGORITHM,
+        secret=settings.SECRET_KEY,
+        lifetime_seconds=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        algorithm=settings.JWT_ALGORITHM,
         # 自定义JWT编码
         encode_payload=lambda payload, secret, algorithm: jwt.encode(
             {
@@ -76,7 +76,7 @@ class MFAService:
         """生成MFA配置URI（用于扫码）"""
         return pyotp.totp.TOTP(secret).provisioning_uri(
             name=user.email,
-            issuer_name=security_settings.MFA_ISSUER_NAME
+            issuer_name=settings.MFA_ISSUER_NAME
         )
 
     @staticmethod
@@ -166,26 +166,26 @@ async def get_user_db(session: AsyncSession = Depends(get_db)):
 
 # 自定义用户管理器（增强安全）
 class CustomUserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
-    reset_password_token_secret = security_settings.SECRET_KEY
-    verification_token_secret = security_settings.SECRET_KEY
+    reset_password_token_secret = settings.SECRET_KEY
+    verification_token_secret = settings.SECRET_KEY
 
     async def validate_password(
         self, password: str, user: User
     ) -> None:
         """企业级密码验证"""
         # 长度检查
-        if len(password) < security_settings.PASSWORD_MIN_LENGTH:
+        if len(password) < settings.PASSWORD_MIN_LENGTH:
             raise InvalidPasswordException(
-                detail=f"Password must be at least {security_settings.PASSWORD_MIN_LENGTH} characters"
+                detail=f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters"
             )
         # 复杂度检查
-        if security_settings.PASSWORD_REQUIRE_UPPER and not any(c.isupper() for c in password):
+        if settings.PASSWORD_REQUIRE_UPPER and not any(c.isupper() for c in password):
             raise InvalidPasswordException(detail="Password must contain uppercase letters")
-        if security_settings.PASSWORD_REQUIRE_LOWER and not any(c.islower() for c in password):
+        if settings.PASSWORD_REQUIRE_LOWER and not any(c.islower() for c in password):
             raise InvalidPasswordException(detail="Password must contain lowercase letters")
-        if security_settings.PASSWORD_REQUIRE_NUMBERS and not any(c.isdigit() for c in password):
+        if settings.PASSWORD_REQUIRE_NUMBERS and not any(c.isdigit() for c in password):
             raise InvalidPasswordException(detail="Password must contain numbers")
-        if security_settings.PASSWORD_REQUIRE_SYMBOLS and not any(not c.isalnum() for c in password):
+        if settings.PASSWORD_REQUIRE_SYMBOLS and not any(not c.isalnum() for c in password):
             raise InvalidPasswordException(detail="Password must contain symbols")
         # 检查常见弱密码（可扩展）
         common_passwords = ["123456", "password", "admin123", user.email, user.username]
@@ -195,7 +195,7 @@ class CustomUserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         """注册后钩子：强制MFA配置"""
         logger.info("User registered", user_id=user.id, email=user.email)
-        if security_settings.MFA_REQUIRED and not user.mfa_secret:
+        if settings.MFA_REQUIRED and not user.mfa_secret:
             # 生成MFA密钥
             secret = mfa_service.generate_secret(user)
             await self.user_db.update(user)
@@ -214,7 +214,7 @@ class CustomUserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
         # 解析令牌过期时间
         try:
             payload = jwt.decode(
-                token, security_settings.SECRET_KEY, algorithms=[security_settings.JWT_ALGORITHM]
+                token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
             )
             expires_at = datetime.fromtimestamp(payload["exp"], UTC)
             await token_blacklist.add_token(token, expires_at)

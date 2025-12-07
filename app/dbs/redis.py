@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 
-import aioredis
+from redis.asyncio import Redis, RedisCluster
 import structlog
 from app.core.config import settings
+from app.core.logger import setup_strcutlogger
 
-logger = structlog.get_logger("redis")
+logger = setup_strcutlogger()
 
 # 全局Redis客户端（单例）
 _redis_client = None
 
-async def get_redis_client() -> aioredis.Redis:
+async def get_redis_client() -> Redis:
     """获取Redis客户端（异步单例）"""
     global _redis_client
     if _redis_client is None:
         try:
-            _redis_client = aioredis.from_url(
+            _redis_client = Redis.from_url(
                 settings.REDIS_URL,
                 password=settings.REDIS_PASSWORD.get_secret_value() if settings.REDIS_PASSWORD else None,
                 db=settings.REDIS_DB,
