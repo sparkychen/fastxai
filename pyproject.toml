@@ -69,6 +69,8 @@ dependencies = [
     "loguru>=0.7.3",
     "uuid7>=0.1.0",
     "sentry-sdk[fastapi]>=2.47.0",
+    "pyotp==2.9.0",
+    "qrcode==8.2",
 ]
 
 [tool.uv]
