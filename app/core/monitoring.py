@@ -159,8 +159,7 @@ class SecurityMonitoringService:
                     user_id=user_id,
                     attempts=user_attempts
                 )
-                return True
-        
+                return True        
         return False
     
     async def trigger_brute_force_alert(self, user_id: str, user_ip: str):

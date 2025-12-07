@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import os
+import sys
+import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request
@@ -10,49 +13,39 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from app.models.audit import AuditService, get_audit_service
 from app.core.config import settings
+from uuid_extensions import uuid7
+from app.core.middlewares import StructuredLoggingMiddleware, AuditLogMiddleware
 from app.config.database import get_db
-import uvloop
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.structlog import StructlogIntegration
-from fastapi_structlog import init_logging, StructlogMiddleware, AccessLogMiddleware, CurrentScopeSetMiddleware
-from app.middleware.logging import RequestContextLoggingMiddleware
-from app.middleware.tracing import TracingMiddleware
+# from fastapi_structlog import init_logging, StructlogMiddleware, AccessLogMiddleware, CurrentScopeSetMiddleware
+# from app.middleware.logging import RequestContextLoggingMiddleware
+# from app.middleware.tracing import TracingMiddleware
 from app.core.handlers import http_exception_handler, generic_exception_handler
 from asgi_correlation_id import CorrelationIdMiddleware  # 需额外安装：pip install asgi-correlation-id
-from fastapi_structlog import StructLogMiddleware
 # 初始化日志
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()
+if settings.SENTRY_DNS:
+    from app.core.sentry import configure_sentry
+    configure_sentry()
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+if sys.platform == "linux" and os.name == "posix":
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-# 在应用创建和中间件加载前初始化Sentry
-sentry_sdk.init(
-    dsn=settings.SENTRY_DSN,  # 关键！从Sentry项目获取的密钥
-    #dsn="https://your-dsn-here@sentry.io/123456", #初始化Sentry（生产环境必须配置DSN
-    integrations=[
-        FastApiIntegration(),  # 自动捕获FastAPI路由异常
-        StructlogIntegration(),  # 与structlog集成，将日志上下文带给Sentry事件
-    ],
-    # 企业级配置建议
-    traces_sample_rate=0.1,  # 性能监控采样率，1.0为100%。生产环境可调低以节省配额
-    environment=settings.ENV,  # 区分 "production", "staging", "development"
-    release="your-app-name@1.0.0",  # 关联代码版本，便于归因
-    send_default_pii=False,  # 是否发送用户个人身份信息，需根据隐私政策决定
-)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     logger.info(
-        "Application started",
+        "Application start...",
         env=settings.ENV,
         log_level=settings.LOG.LEVEL,
         log_format=settings.LOG.FORMAT,
         async_log=settings.LOG.ENABLE_ASYNC,
     )
+    configure_sentry()
     # 启动
     logger.info("Starting security-enhanced application")
     
@@ -102,15 +95,15 @@ def create_secure_application() -> FastAPI:
         redoc_url="/redoc" if settings.ENV != "prod" else None, # 生产环境禁用
     )
 
-    app.add_middleware(CurrentScopeSetMiddleware)  # 1. 设置上下文
+    # app.add_middleware(CurrentScopeSetMiddleware)  # 1. 设置上下文
     app.add_middleware(
         CorrelationIdMiddleware,
         header_name="X-Request-ID",  # 可配置为任意头名称
         # 可选：自定义ID生成器
-        # generator=lambda: uuid.uuid4().hex,
+        generator=lambda: uuid7().hex,
     )    # 2. 生成请求ID
-    app.add_middleware(StructlogMiddleware)        # 3. 将请求ID注入日志上下文
-    app.add_middleware(AccessLogMiddleware)        # 4. 记录访问日志（格式可自定义[citation:1]）
+    app.add_middleware(StructuredLoggingMiddleware)        # 3. 将请求ID注入日志上下文
+    app.add_middleware(AuditLogMiddleware)                 # 4. 记录访问日志（格式可自定义[citation:1]）
 
     # 1. CORS中间件
     app.add_middleware(
@@ -128,9 +121,9 @@ def create_secure_application() -> FastAPI:
     # 设置安全中间件
     SecurityMiddleware.setup_security_middleware(app)
 
-    # 2. 分布式追踪中间件（先于日志中间件）
-    if settings.TRACING_ENABLE:
-        app.add_middleware(TracingMiddleware)
+    # # 2. 分布式追踪中间件（先于日志中间件）
+    # if settings.TRACING_ENABLE:
+    #     app.add_middleware(TracingMiddleware)
     # 3. 请求上下文日志中间件（核心）
     app.add_middleware(RequestContextLoggingMiddleware)
 
@@ -242,7 +235,7 @@ def create_secure_application() -> FastAPI:
 app = create_secure_application()
 
 if __name__ == "__main__":
-    import uvicorn
+    
     
     # 生产环境配置
     uvicorn_config = {

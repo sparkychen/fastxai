@@ -157,7 +157,6 @@ class SensitiveFilter:
 def configure_file_logger():
     """配置Loguru日志轮转（替代structlog文件输出，性能更高）"""
     # 创建日志目录
-    settings.LOG.FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
     loguru_logger.add(
         sink="logs/app-{time:YYYY-MM-DD}.err",
         level="ERROR",

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
+import os
 import re
 import html
 from typing import Any, Optional, List, Dict
-from pydantic import BaseModel, validator, root_validator
-from pydantic import EmailStr, constr, conint, confloat
-from fastapi import HTTPException, status
+from pydantic import EmailStr, constr, conint, confloat, Field, field_validator, BaseModel, StringConstraints
+from app.core.config import settings
+from typing import Annotated
 import bleach
 
 class SecureString(str):
-    """安全字符串类，自动处理XSS"""
-    
+    """安全字符串类，自动处理XSS"""    
     def __new__(cls, value: Any):
         if value is None:
             value = ""
@@ -19,13 +19,12 @@ class SecureString(str):
         return super().__new__(cls, safe_value)
 
 class SanitizedInput(BaseModel):
-    """基础安全输入模型"""
-    
+    """基础安全输入模型"""    
     class Config:
         anystr_strip_whitespace = True
         validate_assignment = True
     
-    @validator('*', pre=True)
+    @field_validator('*', pre=True)
     def sanitize_strings(cls, v):
         """消毒字符串输入"""
         if isinstance(v, str):
@@ -42,15 +41,24 @@ class SanitizedInput(BaseModel):
 
 class UserInput(SanitizedInput):
     """用户输入模型"""
-    username: constr(
-        min_length=3, 
-        max_length=50,
-        regex=r'^[a-zA-Z0-9_.-]+$'  # 只允许字母、数字、点、下划线、短横线
-    )
+    username: Annotated[
+        str, 
+        StringConstraints(
+            min_length=3, 
+            max_length=50, 
+            pattern=r'^[a-zA-Z0-9_.-]+$'
+        )
+    ]
     email: EmailStr
-    password: constr(min_length=12, max_length=128)
+    password: Annotated[
+        str, 
+        StringConstraints(
+            min_length=12, 
+            max_length=128
+        )
+    ]
     
-    @validator('username')
+    @field_validator('username')
     def validate_username(cls, v):
         """验证用户名"""
         # 防止注入攻击
@@ -59,13 +67,13 @@ class UserInput(SanitizedInput):
             raise ValueError('Username not allowed')
         return v
     
-    @validator('password')
+    @field_validator('password')
     def validate_password(cls, v):
         """验证密码强度"""
-        from ..security.auth import auth_service
+        from .auth import auth_service
         if not auth_service.validate_password_policy(v):
             raise ValueError(
-                f'Password must be at least {security_settings.PASSWORD_MIN_LENGTH} '
+                f'Password must be at least {settings.PASSWORD_MIN_LENGTH} '
                 'characters and contain uppercase, lowercase, digit, and special character'
             )
         return v
@@ -159,8 +167,7 @@ class HTMLSanitizer:
             return False
 
 class InputValidationService:
-    """输入验证服务"""
-    
+    """输入验证服务"""    
     @staticmethod
     def validate_email(email: str) -> bool:
         """验证邮箱格式和安全性"""

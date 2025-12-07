@@ -40,7 +40,7 @@ class DataEncryptor:
         
         # 创建多Fernet实例以支持密钥轮换
         self.fernet = Fernet(key)
-    
+        
     def encrypt_field(self, data: Any) -> str:
         """加密字段数据"""
         if data is None:
