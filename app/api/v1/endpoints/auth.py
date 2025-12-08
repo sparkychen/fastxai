@@ -9,7 +9,7 @@ from app.models.user import User
 from app.managers.user_manager import get_user_manager
 from app.core.security import auth_backend
 from app.core.config import settings
-from app.dbs.redis import get_redis_client
+from app.database.redis import get_redis_client
 from fastapi.security import HTTPBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta

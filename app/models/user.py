@@ -5,8 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 import uuid
 from typing import Optional, Dict, Any
-
-from src.config.database import Base
+from app.database.postgres import Base
 
 class User(Base):
     __tablename__ = "users"

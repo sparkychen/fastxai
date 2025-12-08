@@ -3,7 +3,6 @@
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from uuid_extensions import uuid7
-from app.core.logger import audit_logger
 from app.core.config import settings
 from contextvars import ContextVar
 from structlog.contextvars import bind_contextvars, clear_contextvars, merge_contextvars
@@ -17,13 +16,12 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import re
-from ..core.auth import auth_service
+from app.core.auth import auth_service
 import structlog
-from app.core.logger import setup_strcutlogger
 from fastapi import Request, Response, HTTPException, FastAPI, status
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from uuid_extensions import uuid7
+from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()
 
@@ -619,7 +617,7 @@ def audit_log(operation: str, resource_type: str):
             # 获取请求对象（需保证第一个参数是request）
             request = args[0] if isinstance(args[0], Request) else None
             if not request:
-                audit_logger.warning("Request object not found for audit log")
+                logger.warning("Request object not found for audit log")
                 return await func(*args, **kwargs)
             
             # 初始化审计数据

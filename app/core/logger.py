@@ -223,7 +223,9 @@ def setup_strcutlogger():
     logger = get_logger(settings.APP_NAME)
     
     # 企业级：设置日志级别（生产环境）
-    structlog.get_logger().setLevel(structlog.get_logger().level)    
+    structlog.get_logger().setLevel(structlog.get_logger().level)
+    if settings.AUDIT_LOG_ENABLED:
+        return structlog.get_logger("AUDIT_LOG")        
     return structlog.get_logger()
 
 class AsyncLogProcessor:
@@ -297,9 +299,9 @@ class AsyncLogProcessor:
             structlog.get_logger("async_logger").error("Async log enqueue failed", error=str(e))
             return event_dict  # 降级为同步输出
 
-LOGGER = setup_strcutlogger()
+# logger = setup_strcutlogger()
 # 审计日志专用 logger
-audit_logger = structlog.get_logger("AUDIT")
+# audit_logger = structlog.get_logger("AUDIT")
 
 # async def exception_handler(request: Request, exc: Exception):
 #     # 企业级：记录异常

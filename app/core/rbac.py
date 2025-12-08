@@ -4,7 +4,7 @@ from typing import List, Set, Callable, Optional
 from functools import wraps
 from fastapi import HTTPException, status, Depends
 from enum import Enum
-from .auth import auth_service
+from ..services.auth_service import auth_service
 from app.models.user import User
 from app.core.logger import setup_strcutlogger
 

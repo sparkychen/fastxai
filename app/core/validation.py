@@ -70,7 +70,7 @@ class UserInput(SanitizedInput):
     @field_validator('password')
     def validate_password(cls, v):
         """验证密码强度"""
-        from .auth import auth_service
+        from ..services.auth_service import auth_service
         if not auth_service.validate_password_policy(v):
             raise ValueError(
                 f'Password must be at least {settings.PASSWORD_MIN_LENGTH} '

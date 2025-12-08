@@ -9,6 +9,8 @@ from typing import List, Literal, Optional, Dict, Set
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import EmailStr, SecretStr, Field
 from cryptography.fernet import Fernet
+from urllib.parse import quote_plus
+from uuid_extensions import uuid7
 
 class Settings(BaseSettings):
     
@@ -26,8 +28,14 @@ class Settings(BaseSettings):
     DEBUG: bool = False if ENV != "prod" else True
 
     # 主库（写）DSN
-    DB_WRITE_DSN: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
-    DB_READ_DSNS: List[PostgresDsn] = ["postgresql+asyncpg://postgres:postgresAdmin@localhost:5432/fastxai"]
+    DB_MASTER_HOST: str = "localhost"
+    DB_MASTER_PORT: int = 5432
+    DB_MASTER_USER: str = "postgres"
+    DB_MASTER_PASSWORD: str = quote_plus("postgresAdmin")
+    DB_NAME: str = "fastxai"
+    DB_MASTER_URL: str = f"postgresql+asyncpg://{DB_MASTER_PASSWORD}:{DB_MASTER_PASSWORD}@{DB_MASTER_HOST}:{DB_MASTER_PORT}/{DB_NAME}"
+    DB_WRITE_DSN: List[str] = [DB_MASTER_URL]
+    DB_READ_DSNS: List[str] = [DB_MASTER_URL]
     DB_ENABLE_RW_SEPARATION: bool = True
     DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", 20))           # 常驻连接数（CPU核心*2）
     DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", 10))     # 应急溢出连接
@@ -105,8 +113,16 @@ class Settings(BaseSettings):
     AUDIT_LOG_POSTGRES_TABLE: str = "audit_logs" # PostgreSQL 配置（持久化）    
     AUDIT_LOG_STORAGE_BACKENDS: List[Literal["file", "redis", "postgres", "es"]] = ["file", "redis", "postgres"] # 存储配置（分级存储）
     # 安全配置
-    AUDIT_LOG_SIGN_ENABLE: bool = True  # 日志签名（防篡改）
-    AUDIT_LOG_SIGN_SECRET: bytes = os.getenv("AUDIT_LOG_SIGN_SECRET", "").encode()  # 32字节密钥
+    AUDIT_LOG_SIGN_ENABLE: bool = Field(
+        default=True, 
+        env="AUDIT_LOG_SIGN_ENABLE",
+        description="是否开启审计日志签名（防篡改），生产环境必须为True"
+    )
+    AUDIT_LOG_SIGN_SECRET: bytes = Field(
+        default=os.getenv("AUDIT_LOG_SIGN_SECRET", "0693630#b08770c4800096!d0$933968").encode(),  # 生产环境禁止硬编码，仅开发环境可临时兜底
+        env="AUDIT_LOG_SIGN_SECRET",
+        description="审计日志签名密钥（必须32字节，生产环境强制配置）"
+    )
     AUDIT_LOG_SENSITIVE_FIELDS: List[str] = ["password", "phone", "id_card", "bank_card", "card_no", "email", "token" "access_token"]  # 敏感字段脱敏    
     # 审计日志必选字段（企业级规范）
     AUDIT_LOG_MANDATORY_FIELDS: List[str] = [
@@ -134,7 +150,7 @@ class Settings(BaseSettings):
     VECTOR_API_KEY: Optional[str] = None
 
 
-    SENTRY_DNS: str = None
+    SENTRY_DNS: str = ""
     
 
     # Authentication
@@ -153,7 +169,11 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_ROTATION: bool = True  # 刷新令牌轮换（防止重放）
     JWT_BLACKLIST_ENABLED: bool = True  # 令牌黑名单
     JWT_BLACKLIST_TTL_SECONDS: int = JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60  # 黑名单超时
-    JWT_SECRET_KEY: str = Field(..., env="JWT_SECRET_KEY")
+    JWT_SECRET_KEY: str = Field(
+        default="dev-only-jwt-secret-32bytes-12345678",  # 开发兜底
+        env="JWT_SECRET_KEY",  # 修复：闭合引号
+        description="JWT签名密钥（生产环境必须≥32字节）"
+    )
     JWT_AUDIENCE: str = "fastapi:auth"
     JWT_ISSUER: str = "secure-api"
     JWT_BLACKLIST_TOKEN_TYPE: Literal["access", "refresh", "both"] = "both"
@@ -199,7 +219,7 @@ class Settings(BaseSettings):
     
     # ================= 数据安全配置 =================
     ENCRYPTION_ALGORITHM: str = "AES-256-GCM"  # 对称加密算法
-    ENCRYPTION_KEY: bytes = os.getenv("ENCRYPTION_KEY", "").encode()  # 32字节密钥
+    ENCRYPTION_KEY: bytes = os.getenv("ENCRYPTION_KEY", "mM93630$b08770c480096#@d0$933968").encode()  # 32字节密钥
     SENSITIVE_FIELDS: List[str] = ["password", "phone", "email", "id_card", "bank_card"]
     DATA_MASKING_CHAR: str = "*"  # 脱敏字符
     
@@ -237,19 +257,19 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: List[str] = ["Authorization", "Content-Type", "X-Request-ID"]
 
     # 配置验证
-    @field_validator("SECRET_KEY")
+    @field_validator("SECRET_KEY", mode="before", check_fields=False) # mode="before" 表示验证原始值
     def validate_secret_key(cls, v):
         if not v and cls.ENV == "prod":
             raise ValueError("SECRET_KEY must be set in production environment")
         return v
 
-    @field_validator("ENCRYPTION_KEY")
+    @field_validator("ENCRYPTION_KEY", mode="before")
     def validate_encryption_key(cls, v):
         if len(v) != 32 and cls.ENV == "prod":
             raise ValueError("ENCRYPTION_KEY must be 32 bytes (256 bits) in production")
         return v
 
-    @field_validator("ALLOWED_HOSTS", "CORS_ORIGINS", mode="before")
+    @field_validator("ALLOWED_HOSTS", "CORS_ORIGINS", mode="before", check_fields=False)
     def parse_list(cls, v):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",")]
@@ -290,11 +310,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "PATCH"]
     CORS_ALLOW_HEADERS: List[str] = ["Authorization", "Content-Type", "X-Request-ID"]
-    
-    # 加密配置
-    ENCRYPTION_KEY: str = Field(..., env="ENCRYPTION_KEY")
-    DATA_ENCRYPTION_ALGORITHM: str = "AES-GCM"
-    
+      
     # Redis安全配置
     REDIS_SECURE_CONNECTION: bool = True
     REDIS_SSL_VERIFY: bool = True
@@ -327,9 +343,10 @@ class Settings(BaseSettings):
     SECURITY_EVENT_LOG_LEVEL: str = "INFO"
     ENABLE_SECURITY_AUDIT: bool = True
 
-    @field_validator("AUDIT_LOG_SIGN_SECRET")
-    def validate_sign_secret(cls, v):
-        if cls.AUDIT_LOG_SIGN_ENABLE and len(v) != 32:
+    @field_validator("AUDIT_LOG_SIGN_SECRET", mode="after")
+    def validate_sign_secret(cls, v: bytes, info):
+        enable = info.data.get("AUDIT_LOG_SIGN_ENABLE", False)
+        if enable and len(v) != 32:
             raise ValueError("AUDIT_LOG_SIGN_SECRET must be 32 bytes (256 bits) in production")
         return v
 
@@ -339,19 +356,19 @@ class Settings(BaseSettings):
             return [path.strip() for path in v.split(",")]
         return v
     
-    @field_validator("JWT_SECRET_KEY", "ENCRYPTION_KEY")
+    @field_validator("JWT_SECRET_KEY", "ENCRYPTION_KEY", mode="before")
     def validate_key_length(cls, v):
         if len(v) < 32:
             raise ValueError("密钥长度必须至少32个字符")
         return v
     
-    @field_validator("CORS_ORIGINS", pre=True)
+    @field_validator("CORS_ORIGINS", mode="before")
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
     
-    @field_validator("POSTGRES_DSN", mode="before")
+    @field_validator("POSTGRES_DSN", mode="before", check_fields=False)
     def assemble_async_dsn(cls, v, values):
         """组装asyncpg驱动的DSN（含SSL）"""
         if isinstance(v, str):
@@ -385,14 +402,15 @@ class Settings(BaseSettings):
         env_file=f".env.{ENV}",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
+        frozen=True   # 配置冻结，防止运行时篡改（安全增强）
     )
 
 
 class KeyManagementService:
     """密钥管理服务"""    
     def __init__(self):
-        self.fernet = Fernet(Settings().ENCRYPTION_KEY.encode())
+        self.fernet = Fernet(Settings().ENCRYPTION_KEY.decode())
     
     def encrypt_data(self, data: str) -> bytes:
         """加密敏感数据"""
@@ -409,7 +427,7 @@ class KeyManagementService:
 
 
 settings = Settings()
-key_manager = KeyManagementService()
+# key_manager = KeyManagementService()
 
 # # 动态调整日志配置（根据环境）
 # if settings.ENV == "dev":

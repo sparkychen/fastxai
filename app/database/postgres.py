@@ -427,7 +427,6 @@ def auto_rw_separation(func):
                 if isinstance(v, AsyncSession):
                     db_param = v
                     break
-
         if db_param:
             # 检测方法内是否有写操作（简化版：可根据SQLAlchemy事件扩展）
             has_write_operation = any(
@@ -443,12 +442,12 @@ def auto_rw_separation(func):
         return await func(*args, **kwargs)
     return wrapper
 
-# #### 以下是制动切换demo 自动切换的依赖注入
-# async def get_auto_rw_db() -> AsyncGenerator[AsyncSession, None]:
-#     """自动切换主/从库的会话依赖"""
-#     # 初始默认读从库，有写操作时自动切主库
-#     async for session in db_manager.get_session(read_only=True):
-#         yield session
+#### 以下是制动切换demo 自动切换的依赖注入
+async def get_auto_rw_db() -> AsyncGenerator[AsyncSession, None]:
+    """自动切换主/从库的会话依赖"""
+    # 初始默认读从库，有写操作时自动切主库
+    async for session in db_manager.get_session(read_only=True):
+        yield session
 
 # @auto_rw_separation
 # async def mixed_operation(

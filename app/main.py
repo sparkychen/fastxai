@@ -11,11 +11,12 @@ from app.core.middlewares import SecurityMiddleware
 from app.core.monitoring import SecurityMonitoringService
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from app.models.audit import AuditService, get_audit_service
+from app.services.audit_service import AuditService, get_audit_service
 from app.core.config import settings
 from uuid_extensions import uuid7
 from app.core.middlewares import StructuredLoggingMiddleware, AuditLogMiddleware
-from app.config.database import get_db
+from app.database.postgres import get_auto_rw_db, auto_rw_separation
+from app.database.redis import get_redis_client, close_redis_client
 # from fastapi_structlog import init_logging, StructlogMiddleware, AccessLogMiddleware, CurrentScopeSetMiddleware
 # from app.middleware.logging import RequestContextLoggingMiddleware
 # from app.middleware.tracing import TracingMiddleware
@@ -41,11 +42,11 @@ if settings.SENTRY_DNS:
     from app.core.sentry import configure_sentry
     configure_sentry()
 
-if sys.platform == "linux" and os.name == "posix":
+if sys.platform == "linux":
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-
+@auto_rw_separation
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
@@ -61,23 +62,14 @@ async def lifespan(app: FastAPI):
     logger.info("Starting security-enhanced application")
     
     # 初始化安全监控
-    from redis.asyncio import Redis
-    redis_client = Redis.from_url("redis://localhost:6379")
-    
-    async with get_db() as db_session:
+    redis_client = await get_redis_client()
+    app.state.redis_client = redis_client
+    async with get_auto_rw_db() as db_session:
         audit_service = AuditService(db_session)
-        security_monitoring = SecurityMonitoringService(redis_client, audit_service)
-        
+        security_monitoring = SecurityMonitoringService(redis_client, audit_service)        
         # 存储到应用状态
         app.state.security_monitoring = security_monitoring
         app.state.audit_service = audit_service
-
-        # 健康检查
-        # db_health = await check_db_health()
-        # if db_health["status"] != "healthy":
-        #     logger.error("DB health check failed", health=db_health)
-        #     raise RuntimeError("Database initialization failed")
-        # logger.info("App initialized successfully", db_health=db_health)
     
     logger.info("Security services initialized")
     
@@ -85,7 +77,7 @@ async def lifespan(app: FastAPI):
     
     # 关闭
     logger.info("Shutting down security services")
-    await redis_client.close()
+    await close_redis_client()
 
     logger.info("Application shutting down")
     # # 等待异步日志处理器刷新
@@ -184,12 +176,12 @@ def create_secure_application() -> FastAPI:
         }
     
     @app.get("/health", tags=["health"])
-    async def health_check():
+    async def dbs_health_check():
         """健康检查接口（供K8s/监控使用）"""
         # 检查数据库
         db_healthy = True
         try:
-            from app.core.db import get_db_manager
+            from app.database.postgres import get_db_manager
             health = await get_db_manager().health_check()
             db_healthy = health["status"] == "healthy"
         except Exception:

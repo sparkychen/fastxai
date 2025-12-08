@@ -13,8 +13,8 @@ from fastapi.security import (
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as redis
 from uuid_extensions import uuid7
-from .config import settings
-from ..config import get_db
+from ..core.config import settings
+from app.database.postgres import get_auto_rw_db, auto_rw_separation
 from ..domain.models.user import User
 from ..domain.repositories.user import UserRepository
 from app.core.logger import setup_strcutlogger
@@ -47,6 +47,7 @@ class AdvancedAuthService:
         """初始化Redis连接"""
         self.redis_client = redis.from_url(
             "redis://localhost:6379",
+            settings.REDIS_URL,
             decode_responses=True,
             ssl=settings.REDIS_SECURE_CONNECTION,
             ssl_cert_reqs="required" if settings.REDIS_SSL_VERIFY else "none"
@@ -265,10 +266,8 @@ class AdvancedAuthService:
                 algorithms=[settings.JWT_ALGORITHM],
                 audience=settings.JWT_AUDIENCE,
                 issuer=settings.JWT_ISSUER
-            )
-            
-            return payload
-        
+            )            
+            return payload        
         except JWTError as e:
             logger.error("Token decode error", error=str(e))
             raise HTTPException(
@@ -277,11 +276,12 @@ class AdvancedAuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
     
+    @auto_rw_separation
     async def get_current_user(
         self,
         token: Optional[str] = Depends(oauth2_scheme),
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_auto_rw_db)
     ) -> User:
         """获取当前认证用户"""
         # 支持两种认证方式：Bearer token 和 API Key
@@ -298,8 +298,7 @@ class AdvancedAuthService:
             )
         
         try:
-            payload = self.decode_token(auth_token)
-            
+            payload = self.decode_token(auth_token)            
             # 检查令牌类型
             token_type = payload.get("type")
             if token_type != "access":
@@ -341,13 +340,10 @@ class AdvancedAuthService:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Permissions changed, please re-authenticate",
-                )
-            
+                )            
             # 记录成功的认证
-            logger.info("User authenticated successfully", user_id=user_id)
-            
-            return user
-        
+            logger.info("User authenticated successfully", user_id=user_id)            
+            return user        
         except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
