@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String, DateTime, JSON, Text, Enum as SQLEnum
 import uuid
-from ..config import Base
+from app.database.postgres import Base
 from app.core.config import settings
 
 

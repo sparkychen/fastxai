@@ -2,18 +2,17 @@
 
 from sqlalchemy import Column, DateTime, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
+from app.database.postgres import Base
 import uuid
+from uuid_extensions import uuid7
 
-# 基础模型（所有表继承）
-Base = declarative_base()
 
 class BaseModel(Base):
     """企业级基础模型（含审计、软删除）"""
     __abstract__ = True
 
     # 主键：UUID（避免自增ID性能瓶颈）
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid7(), index=True)
     # 审计字段（合规要求）
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

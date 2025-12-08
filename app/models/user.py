@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import String, Boolean, DateTime, JSON
+from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 import uuid
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, List
 from app.database.postgres import Base
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field
+from enum import Enum
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "users" 
     
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
@@ -18,6 +21,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # MFA 相关字段
+    mfa_enabled = Column(Boolean, default=False)
+    mfa_secret = Column(String, nullable=True)  # 加密存储
+    mfa_method = Column(String, default="totp")
+    last_mfa_login = Column(DateTime, nullable=True)
     
     # Profile and preferences
     profile_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
@@ -29,9 +38,78 @@ class User(Base):
     
     # OAuth and social login
     oauth_accounts: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
-    
+   
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, username={self.username})>"
+    
+
+class MFABackupCode(Base):
+    __tablename__ = "mfa_backup_codes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    code_hash = Column(String)  # 哈希后的备份代码
+    used = Column(Boolean, default=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    ip_address = Column(String)
+    user_agent = Column(Text)
+    successful = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MFAMethod(str, Enum):
+    TOTP = "totp"
+    EMAIL = "email"
+    SMS = "sms"
+
+class UserBase(BaseModel):
+    email: EmailStr
+    full_name: str
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=8)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+    mfa_token: Optional[str] = None  # MFA 令牌
+
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+    mfa_enabled: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class MFASetupRequest(BaseModel):
+    method: MFAMethod
+
+class MFASetupResponse(BaseModel):
+    qr_code_url: str
+    secret_key: str  # 仅用于演示，生产环境应加密
+    backup_codes: List[str]
+
+class MFAVerifyRequest(BaseModel):
+    token: str = Field(..., min_length=6, max_length=6)
+    method: MFAMethod
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    mfa_required: bool = False  # 标识是否需要 MFA 验证
+
+class MFABackupVerify(BaseModel):
+    backup_code: str = Field(..., min_length=8, max_length=8)
     
 
 # # 租户模型（多租户隔离）

@@ -15,7 +15,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from services.mfa_service import verify_mfa_code
-from app.models.mfa_user import (
+from app.models.user import (
     UserLogin, UserCreate, UserResponse, Token, 
     MFASetupRequest, MFASetupResponse, MFAVerifyRequest
 )
