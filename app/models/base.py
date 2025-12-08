@@ -5,9 +5,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.database.postgres import Base
 import uuid
 from uuid_extensions import uuid7
+from sqlmodel import SQLModel, Field, DateTime
 
-
-class BaseModel(Base):
+class BaseModel(SQLModel):
     """企业级基础模型（含审计、软删除）"""
     __abstract__ = True
 

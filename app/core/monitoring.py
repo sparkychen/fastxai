@@ -7,7 +7,9 @@ from enum import Enum
 import redis.asyncio as redis
 from prometheus_client import Counter, Histogram, Gauge
 from app.core.config import settings
-from ..models.audit import AuditService, AuditEventType, AuditEventSeverity
+# from app.models.audit import AuditEventType, AuditEventSeverity
+from app.services.audit_service import AuditService, AuditEventType, AuditEventSeverity
+from pydantic import BaseModel
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()

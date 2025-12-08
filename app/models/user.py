@@ -1,49 +1,63 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text, func
 from datetime import datetime
+import sqlalchemy as sa
 import uuid
 from typing import Optional, Dict, List, Any
-from app.database.postgres import Base
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr, ConfigDict
+from sqlmodel import SQLModel, Field, DateTime
 from enum import Enum
 
-class User(Base):
+class User(SQLModel, table=True):
     __tablename__ = "users" 
+    __table_args__ = (
+        sa.Table(
+            __tablename__,
+            SQLModel.metadata,
+            comment='系统用户主表，存储用户核心身份信息',
+            # 还可以在此添加其他参数，例如 schema='auth_schema'
+        ))
     
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[Optional[str]] = mapped_column(String(100))
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    id: Optional[int] = Field(default=None, sa_column=Column(Integer, primary_key=True, comment="唯一标识（自增主键）"))
+    email: EmailStr = Field(sa_column=Column(String(100),unique=True,index=True,nullable=False,comment="用户邮箱（唯一）"))
+    # username: str = Field(unique=True, index=True, sa_column=Column(String(100), nullable=False, comment="用户名"))
+    hashed_password: str = Field(sa_column=Column(String(255), nullable=False, comment="用户密码(加密)"))
+    full_name: Optional[str] = Field(sa_column=Column(String(100), nullable=True, comment="用户全名"))
+    is_active: bool = Field(sa_column=Column(Boolean, default=True, comment="是否是活跃状态"))
+    is_superuser: bool = Field(sa_column=Column(Boolean, default=False, comment="是否是超级用户"))
+    is_verified: bool = Field(sa_column=Column(Boolean, default=False, comment="是否已验证激活"))
 
     # MFA 相关字段
-    mfa_enabled = Column(Boolean, default=False)
-    mfa_secret = Column(String, nullable=True)  # 加密存储
-    mfa_method = Column(String, default="totp")
-    last_mfa_login = Column(DateTime, nullable=True)
+    mfa_enabled: bool = Field(sa_column=Column(Boolean, default=False, nullable=False, comment="是否强制启用MFA安全验证设置"))
+    mfa_secret:str = Field(sa_column=Column(String(255), nullable=True, comment="MFA加密密码, mfa_enabled=True是不能为空"))
+    mfa_method: str = Field(sa_column=Column(String(100), default="totp", nullable=False, comment="MFA method方法")) 
+    last_mfa_login = Field(default=None,sa_column=Column(DateTime(timezone=True), nullable=True, comment="最近或最后一次通过MFA方式登录时间"))    
     
     # Profile and preferences
-    profile_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
+    profile_data: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, comment="用户配置数据"))
     
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, comment="创建时间"))
+    updated_at: datetime = Field(sa_column=sa.Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+        onupdate=func.now(),
+        comment="最后一次更新时间，自动设置更新数据库时间onupdate"
+    ))
+    last_login: datetime = Field(default=None,sa_column=Column(DateTime(timezone=True), nullable=True, comment="最近或会后一次登录时间"))
     
     # OAuth and social login
-    oauth_accounts: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
+    oauth_accounts: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, comment="用户oauth账号信息"))
    
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, username={self.username})>"
     
 
-class MFABackupCode(Base):
+class MFABackupCode(SQLModel):
     __tablename__ = "mfa_backup_codes"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -53,7 +67,7 @@ class MFABackupCode(Base):
     used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class LoginAttempt(Base):
+class LoginAttempt(SQLModel):
     __tablename__ = "login_attempts"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -69,14 +83,14 @@ class MFAMethod(str, Enum):
     EMAIL = "email"
     SMS = "sms"
 
-class UserBase(BaseModel):
+class UserBase(SQLModel):
     email: EmailStr
     full_name: str
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
-class UserLogin(BaseModel):
+class UserLogin(SQLModel):
     email: EmailStr
     password: str
     mfa_token: Optional[str] = None  # MFA 令牌
@@ -90,30 +104,30 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
-class MFASetupRequest(BaseModel):
+class MFASetupRequest(SQLModel):
     method: MFAMethod
 
-class MFASetupResponse(BaseModel):
+class MFASetupResponse(SQLModel):
     qr_code_url: str
     secret_key: str  # 仅用于演示，生产环境应加密
     backup_codes: List[str]
 
-class MFAVerifyRequest(BaseModel):
+class MFAVerifyRequest(SQLModel):
     token: str = Field(..., min_length=6, max_length=6)
     method: MFAMethod
 
-class Token(BaseModel):
+class Token(SQLModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     mfa_required: bool = False  # 标识是否需要 MFA 验证
 
-class MFABackupVerify(BaseModel):
+class MFABackupVerify(SQLModel):
     backup_code: str = Field(..., min_length=8, max_length=8)
     
 
 # # 租户模型（多租户隔离）
-# class Tenant(Base):
+# class Tenant(SQLModel):
 #     __tablename__ = "tenants"
 #     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
 #     name = Column(String(100), unique=True, nullable=False)
@@ -121,7 +135,7 @@ class MFABackupVerify(BaseModel):
 #     is_active = Column(Boolean, default=True)
 
 # # 多租户用户模型（核心）
-# class User(SQLAlchemyBaseUserTableAsync, Base):
+# class User(SQLModel):
 #     __tablename__ = "users"
 #     # 核心字段（FastAPI-Users基础字段）：id, email, hashed_password, is_active, is_verified, is_superuser
 #     # 自定义字段（企业级）

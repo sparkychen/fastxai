@@ -4,7 +4,7 @@ import os
 import time
 import asyncio
 from app.core.config import settings
-from sqlalchemy.orm import DeclarativeBase
+# from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import QueuePool
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -25,9 +25,9 @@ NAMING_CONVENTION = {
     "pk": "pk_%(table_name)s"
 }
 
-class Base(DeclarativeBase):
-    __abstract__ = True
-    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+# class Base(DeclarativeBase):
+#     __abstract__ = True
+#     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class DatabaseManager:

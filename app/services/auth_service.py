@@ -16,7 +16,7 @@ from uuid_extensions import uuid7
 from ..core.config import settings
 from app.database.postgres import get_auto_rw_db, auto_rw_separation
 from app.models.user import User
-from ..domain.repositories.user import UserRepository
+# from ..domain.repositories.user import UserRepository
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()

@@ -4,11 +4,10 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from enum import Enum
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Column, String, DateTime, JSON, Text, Enum as SQLEnum
 import uuid
-from app.database.postgres import Base
+from sqlmodel import SQLModel, Field, DateTime
 from app.core.config import settings
 
 
@@ -34,7 +33,7 @@ class AuditEventSeverity(str, Enum):
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
 
-class AuditLog(Base):
+class AuditLog(SQLModel):
     """审计日志数据库模型"""
     __tablename__ = "audit_logs"
     
@@ -70,7 +69,7 @@ class AuditLog(Base):
     service_name = Column(String(100), default="fastapi-service")
     hostname = Column(String(255), nullable=True)
 
-class AuditEvent(BaseModel):
+class AuditEvent(SQLModel):
     """审计事件数据模型"""
     event_type: AuditEventType
     severity: AuditEventSeverity = AuditEventSeverity.MEDIUM
