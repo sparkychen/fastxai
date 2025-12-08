@@ -35,7 +35,6 @@ if __name__ == "__main__":
         "log_config": None,
         "reload_dirs": ["app"],
         "reload_excludes": ["*.tmp", "*.log", "*.err", "tests/*"],
-
     }
     if sys.platform == "linux":
         CPU_CORES = get_cpu_cores()

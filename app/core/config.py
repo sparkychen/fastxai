@@ -15,6 +15,7 @@ from uuid_extensions import uuid7
 class Settings(BaseSettings):
     
     APP_NAME: str = "FastXAI-Multi-agents-system"
+    APP_VERSION: str = "0.0.2"
     ROOT_DIR: Path = Path(__file__).parent.parent.parent    
     ENV: Literal["dev", "dtaging", "prod"] = "prod"
     API_PREFIX: str = "/api/v1"

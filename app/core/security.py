@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from src.domain.repositories.user import UserRepository
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
-from app.dbs.redis import get_redis_client
-from app.metrics.auth import increment_auth_metric
+from app.database.redis import get_redis_client
+from app.services.auth_service import increment_auth_metric
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()

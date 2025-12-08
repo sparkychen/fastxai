@@ -4,7 +4,7 @@ from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 import uuid
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from app.database.postgres import Base
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field

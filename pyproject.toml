@@ -71,6 +71,9 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.47.0",
     "pyotp==2.9.0",
     "qrcode==8.2",
+    "starlette-prometheus>=0.10.0",
+    "fastapi-profiler==1.4.1",
+    "asgi-correlation-id>=4.3.4",
 ]
 
 [tool.uv]

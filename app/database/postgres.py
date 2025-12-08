@@ -340,6 +340,7 @@ def get_db_manager() -> DatabaseManager:
 # 全局实例（进程安全）
 db_manager = get_db_manager()
 
+
 # ========== 重试装饰器 & 生命周期函数 ==========
 def db_retry_decorator(max_attempts: int = 3):
     def decorator(func):
@@ -384,11 +385,21 @@ async def init_db_schema():
         logger.error(f"Process {db_manager.process_id}: Failed to init DB schema", error=str(e))
         raise
 
+async def db_health_check():
+    if not db_manager._initialized:
+        raise RuntimeError("DB manager not initialized")
+    health = await db_manager.health_check()
+    if health["status"] != "healthy":
+        raise RuntimeError(f"Process {db_manager.process_id}: DB health check failed: {health}")
+    return health
+
 async def startup_db():
+    if not db_manager._initialized:
+        raise RuntimeError("DB manager not initialized")
     await db_manager.init()
     if settings.ENV == "dev":
         await init_db_schema()
-    health = await db_manager.health_check()
+    health = await db_health_check()
     if health["status"] != "healthy":
         raise RuntimeError(f"Process {db_manager.process_id}: DB health check failed: {health}")
 

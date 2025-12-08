@@ -33,3 +33,6 @@ vllm关键参数解释
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 vllm serve /opt/models/hf/Qwen/Qwen3-4B-Thinking-2507-FP8 --tensor-parallel-size 1 --gpu-memory-utilization 0.85 --max-num-seqs 32 --max-model-len 4096 --port 8000
 
+# 编译dolphinscheduler-3.1.9 src源码，在windows上编译：(mvn spotless:apply)
+mvn clean package -DskipTests -D"spotless.check.skip"=true -X -e
+

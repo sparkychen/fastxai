@@ -5,7 +5,6 @@ import sys
 from typing import Any, Dict, Optional
 import orjson
 import structlog
-import logging
 import queue
 import asyncio
 import threading
@@ -183,47 +182,40 @@ def configure_file_logger():
 
 
 def setup_strcutlogger():
+    bind_contextvars(
+        request_id="request_id",
+        user_id="user_id"
+    )
+
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            # ThreadLocalsProcessor(),
             structlog.contextvars.merge_contextvars,
             structlog.stdlib.add_log_level,
             structlog.processors.add_log_level,
             structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-            structlog.processors.KeyValueRenderer(key_order=["timestamp", "level", "event", "request_id", "user_id"]),
+            # structlog.processors.KeyValueRenderer(key_order=["timestamp", "level", "event", "request_id", "user_id"]),
             SensitiveFilter(sensitive_fields=settings.AUDIT_LOG_SENSITIVE_FIELDS),
-            structlog.stdlib.filter_by_level,
+            # structlog.stdlib.filter_by_level,
             structlog.processors.JSONRenderer(),
         ],
-        context_processors=[
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.add_log_level,
-        ],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            structlog.get_logger().level
-        ),
-        # logger_factory=structlog.stdlib.LoggerFactory(),
+        # wrapper_class=structlog.make_filtering_bound_logger(logging.INFO)
         logger_factory=lambda name: loguru_logger.bind(name=name),
         wrapper_class=structlog.stdlib.BoundLogger,
         # 企业级：高性能配置
         cache_logger_on_first_use=True,
-        # 企业级：避免日志阻塞
-        async_rendering=False,
     )
 
     configure_file_logger()
 
-    logger = get_logger(settings.APP_NAME)
-    
+    logger = structlog.get_logger(settings.APP_NAME)    
     # 企业级：设置日志级别（生产环境）
-    structlog.get_logger().setLevel(structlog.get_logger().level)
+    # logger.setLevel(settings.LOG_LEVEL)
+
     if settings.AUDIT_LOG_ENABLED:
         return structlog.get_logger("AUDIT_LOG")        
     return structlog.get_logger()

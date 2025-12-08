@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import re
-from app.core.auth import auth_service
+from app.services.auth_service import auth_service
 import structlog
 from fastapi import Request, Response, HTTPException, FastAPI, status
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -394,7 +394,7 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             # 获取用户信息（如果已认证）
             user_id = None
             try:
-                from app.core.auth import get_current_user
+                from app.services.auth_service import get_current_user
                 user = await get_current_user(request)
                 user_id = str(user.id) if user else None
             except:
@@ -595,7 +595,7 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         """获取当前用户信息（需适配实际认证逻辑）"""
         try:
             # 示例：从JWT令牌获取用户信息
-            from app.core.auth import get_current_user
+            from app.services.auth_service import get_current_user
             user = await get_current_user(request)
             audit_data["user_id"] = str(user.id)
             audit_data["user_name"] = user.username
