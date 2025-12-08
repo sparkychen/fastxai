@@ -33,7 +33,7 @@ class User(SQLModel, table=True):
     mfa_enabled: bool = Field(sa_column=Column(Boolean, default=False, nullable=False, comment="是否强制启用MFA安全验证设置"))
     mfa_secret:str = Field(sa_column=Column(String(255), nullable=True, comment="MFA加密密码, mfa_enabled=True是不能为空"))
     mfa_method: str = Field(sa_column=Column(String(100), default="totp", nullable=False, comment="MFA method方法")) 
-    last_mfa_login = Field(default=None,sa_column=Column(DateTime(timezone=True), nullable=True, comment="最近或最后一次通过MFA方式登录时间"))    
+    last_mfa_login: datetime = Field(default=None,sa_column=Column(DateTime(timezone=True), nullable=True, comment="最近或最后一次通过MFA方式登录时间"))    
     
     # Profile and preferences
     profile_data: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, comment="用户配置数据"))
