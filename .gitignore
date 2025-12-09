@@ -1,5 +1,4 @@
 __pycache__               # Python 编译缓存
-__pycache__/*             # Python 编译缓存
 *.py[cod]                 # 编译产物
 *$py.class                # Jython 编译文件
 dist/                     # 打包分发目录
