@@ -11,6 +11,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker, AsyncEngine
 from functools import lru_cache, wraps
 from sqlalchemy import MetaData, text
+from sqlmodel import SQLModel
 import orjson
 import random
 from app.core.logger import setup_strcutlogger
@@ -383,7 +384,7 @@ async def init_db_schema():
         print(f"db_manager._current_write_idx: {db_manager._current_write_idx}")
         print(f"db_manager._write_engines({len(db_manager._write_engines)}): {db_manager._write_engines}")
         async with db_manager._write_engines[db_manager._current_write_idx].begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(SQLModel.metadata.create_all)
         logger.info(f"Process {db_manager.process_id}: DB schema initialized")
     except Exception as e:
         logger.error(f"Process {db_manager.process_id}: Failed to init DB schema", error=str(e))

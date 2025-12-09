@@ -20,7 +20,7 @@ api-docs/                 # 自动生成的 API 文档
 .DS_Store                 # macOS 系统文件
 Thumbs.db                 # Windows 缩略图
 
-# logs/                     # 训练日志
+logs/                     # 日志
 
 .vscode/settings.json     # VSCode 工作区设置
 .pycharm_helpers/         # PyCharm 辅助文件

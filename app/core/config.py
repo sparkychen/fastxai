@@ -29,12 +29,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False if ENV != "prod" else True
 
     # 主库（写）DSN
-    DB_MASTER_HOST: str = "localhost"
+    DB_MASTER_HOST: str = "127.0.0.1"
     DB_MASTER_PORT: int = 5432
     DB_MASTER_USER: str = "postgres"
     DB_MASTER_PASSWORD: str = quote_plus("postgresAdmin")
     DB_NAME: str = "fastxai"
-    DB_MASTER_URL: str = f"postgresql+asyncpg://{DB_MASTER_PASSWORD}:{DB_MASTER_PASSWORD}@{DB_MASTER_HOST}:{DB_MASTER_PORT}/{DB_NAME}"
+    DB_MASTER_URL: str = f"postgresql+asyncpg://{DB_MASTER_USER}:{DB_MASTER_PASSWORD}@{DB_MASTER_HOST}:{DB_MASTER_PORT}/{DB_NAME}"
     DB_WRITE_DSN: List[str] = [DB_MASTER_URL]
     DB_READ_DSNS: List[str] = [DB_MASTER_URL]
     DB_ENABLE_RW_SEPARATION: bool = True
