@@ -74,6 +74,7 @@ dependencies = [
     "starlette-prometheus>=0.10.0",
     "fastapi-profiler==1.4.1",
     "asgi-correlation-id==4.3.4",
+    "deepagents>=0.3.0",
 ]
 
 [tool.uv]

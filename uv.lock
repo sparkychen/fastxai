@@ -112,6 +112,25 @@ wheels = [
 ]
 
 [[package]]
+name = "anthropic"
+version = "0.75.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "docstring-parser" },
+    { name = "httpx" },
+    { name = "jiter" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/04/1f/08e95f4b7e2d35205ae5dcbb4ae97e7d477fc521c275c02609e2931ece2d/anthropic-0.75.0.tar.gz", hash = "sha256:e8607422f4ab616db2ea5baacc215dd5f028da99ce2f022e33c7c535b29f3dfb" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/60/1c/1cd02b7ae64302a6e06724bf80a96401d5313708651d277b1458504a1730/anthropic-0.75.0-py3-none-any.whl", hash = "sha256:ea8317271b6c15d80225a9f3c670152746e88805a7a61e14d4a374577164965b" },
+]
+
+[[package]]
 name = "anyio"
 version = "4.12.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -334,6 +353,15 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/07/18/3c8523962314be6bf4c8989c79ad9531c825210dd13a8669f6b84336e8bd/bleach-6.3.0.tar.gz", hash = "sha256:6f3b91b1c0a02bb9a78b5a454c92506aa0fdf197e1d5e114d2e00c6f64306d22" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/cd/3a/577b549de0cc09d95f11087ee63c739bba856cd3952697eec4c4bb91350a/bleach-6.3.0-py3-none-any.whl", hash = "sha256:fe10ec77c93ddf3d13a73b035abaac7a9f5e436513864ccdad516693213c65d6" },
+]
+
+[[package]]
+name = "bracex"
+version = "2.6"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/63/9a/fec38644694abfaaeca2798b58e276a8e61de49e2e37494ace423395febc/bracex-2.6.tar.gz", hash = "sha256:98f1347cd77e22ee8d967a30ad4e310b233f7754dbf31ff3fceb76145ba47dc7" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/9d/2a/9186535ce58db529927f6cf5990a849aa9e052eea3e2cfefe20b9e1802da/bracex-2.6-py3-none-any.whl", hash = "sha256:0b0049264e7340b3ec782b5cb99beb325f36c3782a32e36e876452fd49a09952" },
 ]
 
 [[package]]
@@ -634,6 +662,21 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/93/bf/0dae295d6d1ba0b1a200a9dd216838464b5bbd05da01407cb1330b377445/datasets-4.4.1.tar.gz", hash = "sha256:80322699aa8c0bbbdb7caa87906da689c3c2e29523cff698775c67f28fdab1fc" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/3b/5e/6f8d874366788ad5d549e9ba258037d974dda6e004843be1bda794571701/datasets-4.4.1-py3-none-any.whl", hash = "sha256:c1163de5211e42546079ab355cc0250c7e6db16eb209ac5ac6252f801f596c44" },
+]
+
+[[package]]
+name = "deepagents"
+version = "0.3.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "langchain" },
+    { name = "langchain-anthropic" },
+    { name = "langchain-core" },
+    { name = "wcmatch" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/cc/c7/d3c2840bd0e66b6cd5948aa69625e129328ad261308e18fcb9a9420709da/deepagents-0.3.0.tar.gz", hash = "sha256:3dd4d2ed53efb1ef78aeb1020a5696c0ec7e58e627b305a6665d33fe6fbdedff" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/22/e9/60bab7f37ff38bf982ea578e457ed1878ded613a3425462bcd07b00487e9/deepagents-0.3.0-py3-none-any.whl", hash = "sha256:9e23532d8d535dc2b0b4e0834453a1223a6a8f81b77947c0faf54537d05ce89a" },
 ]
 
 [[package]]
@@ -1014,6 +1057,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "bleach" },
     { name = "celery" },
+    { name = "deepagents" },
     { name = "duckdb" },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastapi-bgtasks-dashboard" },
@@ -1079,6 +1123,7 @@ requires-dist = [
     { name = "asyncpg", specifier = "==0.31.0" },
     { name = "bleach", specifier = ">=6.3.0" },
     { name = "celery", specifier = "==5.5.3" },
+    { name = "deepagents", specifier = ">=0.3.0" },
     { name = "duckdb", specifier = "==1.4.2" },
     { name = "fastapi", extras = ["standard"], specifier = "==0.124.0" },
     { name = "fastapi-bgtasks-dashboard", specifier = ">=0.1.5" },
@@ -1693,6 +1738,20 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/e3/5b/7c1d6fd075bdfd45ac5ff6fef2a5d2380ffb7988fc9cdd7a37b036744fe4/langchain-1.1.3.tar.gz", hash = "sha256:8c641a750a4277d948c3836529f31de496e7ed4ea9f1c77f66f1845cb586987d" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/f3/39/ed3121ea3a0c60a0cda6ea5c4c1cece013e8bbc9b18344ff3ae507728f98/langchain-1.1.3-py3-none-any.whl", hash = "sha256:e5b208ed93e553df4087117a40bd0d450f9095030a843cad35c53ff2814bf731" },
+]
+
+[[package]]
+name = "langchain-anthropic"
+version = "1.2.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "anthropic" },
+    { name = "langchain-core" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/66/f2/717dcadf0c96960154594409b68bdd5953ab95439e0b65de13cdd5c08785/langchain_anthropic-1.2.0.tar.gz", hash = "sha256:3f3cfad8c519ead2deb21c30dc538b18f4c094704c7874784320cbed7a199453" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/ae/f4/f684725bd375208130ff3e9878ff3e671d888eec89a834617f3d7bcc14c9/langchain_anthropic-1.2.0-py3-none-any.whl", hash = "sha256:f489df97833e12ca0360a098eb9d04e410752840416be87ab60b0a3e120a99fe" },
 ]
 
 [[package]]
@@ -4208,6 +4267,18 @@ wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/bd/95/615e72cd27b85b61eec764a5ca51bd94d40b5adea5ff47567d9ebc4d275a/watchfiles-1.1.1-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:89eef07eee5e9d1fda06e38822ad167a044153457e6fd997f8a858ab7564a336" },
     { url = "https://mirrors.aliyun.com/pypi/packages/c9/81/e7fe958ce8a7fb5c73cc9fb07f5aeaf755e6aa72498c57d760af760c91f8/watchfiles-1.1.1-pp311-pypy311_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ce19e06cbda693e9e7686358af9cd6f5d61312ab8b00488bc36f5aabbaf77e24" },
     { url = "https://mirrors.aliyun.com/pypi/packages/6e/d4/ed38dd3b1767193de971e694aa544356e63353c33a85d948166b5ff58b9e/watchfiles-1.1.1-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3e6f39af2eab0118338902798b5aa6664f46ff66bc0280de76fca67a7f262a49" },
+]
+
+[[package]]
+name = "wcmatch"
+version = "10.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "bracex" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/79/3e/c0bdc27cf06f4e47680bd5803a07cb3dfd17de84cde92dd217dcb9e05253/wcmatch-10.1.tar.gz", hash = "sha256:f11f94208c8c8484a16f4f48638a85d771d9513f4ab3f37595978801cb9465af" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/eb/d8/0d1d2e9d3fabcf5d6840362adcf05f8cf3cd06a73358140c3a97189238ae/wcmatch-10.1-py3-none-any.whl", hash = "sha256:5848ace7dbb0476e5e55ab63c6bbd529745089343427caa5537f230cc01beb8a" },
 ]
 
 [[package]]

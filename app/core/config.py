@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False if ENV != "prod" else True
 
     # 主库（写）DSN
-    DB_MASTER_HOST: str = "127.0.0.1"
+    DB_MASTER_HOST: str = "localhost"
     DB_MASTER_PORT: int = 5432
     DB_MASTER_USER: str = "postgres"
     DB_MASTER_PASSWORD: str = quote_plus("postgresAdmin")
