@@ -910,6 +910,24 @@ wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/59/7f/1bff91a48e755e659d0505f597a8e010ec92059f2219a838fd15887a89b2/fastapi_users-15.0.1-py3-none-any.whl", hash = "sha256:6f637eb2fc80be6bba396b77dded30fe4c22fa943349d2e0a1647894f8b21c16" },
 ]
 
+[package.optional-dependencies]
+sqlalchemy = [
+    { name = "fastapi-users-db-sqlalchemy" },
+]
+
+[[package]]
+name = "fastapi-users-db-sqlalchemy"
+version = "7.0.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "fastapi-users" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/87/12/bc9e6146ae31564741cefc87ee6e37fa5b566933f0afe8aa030779d60e60/fastapi_users_db_sqlalchemy-7.0.0.tar.gz", hash = "sha256:6823eeedf8a92f819276a2b2210ef1dcfd71fe8b6e37f7b4da8d1c60e3dfd595" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/a6/08/9968963c1fb8c34627b7f1fbcdfe9438540f87dc7c9bfb59bb4fd19a4ecf/fastapi_users_db_sqlalchemy-7.0.0-py3-none-any.whl", hash = "sha256:5fceac018e7cfa69efc70834dd3035b3de7988eb4274154a0dbe8b14f5aa001e" },
+]
+
 [[package]]
 name = "fastar"
 version = "0.8.0"
@@ -1002,7 +1020,7 @@ dependencies = [
     { name = "fastapi-csrf-protect" },
     { name = "fastapi-profiler" },
     { name = "fastapi-structlog" },
-    { name = "fastapi-users" },
+    { name = "fastapi-users", extra = ["sqlalchemy"] },
     { name = "fastmcp" },
     { name = "flower" },
     { name = "graphiti-core" },
@@ -1056,7 +1074,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "asgi-correlation-id", specifier = ">=4.3.4" },
+    { name = "asgi-correlation-id", specifier = "==4.3.4" },
     { name = "asyncmy", specifier = "==0.2.10" },
     { name = "asyncpg", specifier = "==0.31.0" },
     { name = "bleach", specifier = ">=6.3.0" },
@@ -1067,16 +1085,16 @@ requires-dist = [
     { name = "fastapi-csrf-protect", specifier = ">=1.0.7" },
     { name = "fastapi-profiler", specifier = "==1.4.1" },
     { name = "fastapi-structlog", specifier = "==0.7.0" },
-    { name = "fastapi-users", specifier = "==15.0.1" },
+    { name = "fastapi-users", extras = ["async", "sqlalchemy"], specifier = "==15.0.1" },
     { name = "fastmcp", specifier = "==2.13.3" },
     { name = "flower", specifier = "==2.0.1" },
-    { name = "graphiti-core", specifier = ">=0.24.1" },
+    { name = "graphiti-core", specifier = "==0.24.3" },
     { name = "hypercorn", specifier = "==0.18.0" },
-    { name = "langchain", specifier = "==1.1.2" },
+    { name = "langchain", specifier = "==1.1.3" },
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-milvus", specifier = ">=0.3.1" },
     { name = "langchain-neo4j", specifier = ">=0.6.0" },
-    { name = "langchain-openai", specifier = "==1.1.0" },
+    { name = "langchain-openai", specifier = "==1.1.1" },
     { name = "langchain-qdrant", specifier = "==1.1.0" },
     { name = "langchain-redis", specifier = ">=0.2.5" },
     { name = "langgraph", specifier = "==1.0.4" },
@@ -1213,7 +1231,7 @@ http = [
 
 [[package]]
 name = "graphiti-core"
-version = "0.24.1"
+version = "0.24.3"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "diskcache" },
@@ -1225,9 +1243,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/95/3b/275ba9be13322e052df048a8c56cbd035af645aa4540389b27694fcfc49c/graphiti_core-0.24.1.tar.gz", hash = "sha256:80c36944d99417182c2e2c56c7e135cc100f8449b44cb86b85ff41b06d21a4af" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/8c/6a/59db048896cc770b3cb13160770845007217d11406e51f5adf2d50482f71/graphiti_core-0.24.3.tar.gz", hash = "sha256:1bb34e46fe4e0c040912e3698daa71114dd4743fdbc9819c46cda0dc4dde3cdf" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/3b/1d/da2f9ed63f67f1579019ce077cceef036fc6d634f013f75d77fd6ebc58ae/graphiti_core-0.24.1-py3-none-any.whl", hash = "sha256:b6d19bd09ee4ca8d43c15d7e7c4212d5b51f4777db3b01e604609952ec27e8a8" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/3e/ed/1f89b1b7be984ce9e985821e85dd04fed46cf19172d6be52ce286dd5bd8b/graphiti_core-0.24.3-py3-none-any.whl", hash = "sha256:89136fa7b9f2db34fb328c433c1f38077123f348fe240904f3ac7a3b05852036" },
 ]
 
 [[package]]
@@ -1665,16 +1683,16 @@ wheels = [
 
 [[package]]
 name = "langchain"
-version = "1.1.2"
+version = "1.1.3"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/53/7c/127a4b15434bed166c1d81ff3ae7c86d19d41c27ca92b42fbbed0c9bb2a3/langchain-1.1.2.tar.gz", hash = "sha256:5d59557cf9939ff6db60c09bbfca80742865c511ddc33b24fc27920b2bb6157b" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/e3/5b/7c1d6fd075bdfd45ac5ff6fef2a5d2380ffb7988fc9cdd7a37b036744fe4/langchain-1.1.3.tar.gz", hash = "sha256:8c641a750a4277d948c3836529f31de496e7ed4ea9f1c77f66f1845cb586987d" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/b8/50/7413db85fab5f1b16523d3353ac45ecd83c439b4b7ffad7681d14f0eb55b/langchain-1.1.2-py3-none-any.whl", hash = "sha256:b8154e1ff090093ab5b3d6eee0e51ac91d83b5f42af0258700594a47a3a6b089" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/f3/39/ed3121ea3a0c60a0cda6ea5c4c1cece013e8bbc9b18344ff3ae507728f98/langchain-1.1.3-py3-none-any.whl", hash = "sha256:e5b208ed93e553df4087117a40bd0d450f9095030a843cad35c53ff2814bf731" },
 ]
 
 [[package]]
@@ -1720,7 +1738,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "1.1.1"
+version = "1.1.2"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -1732,9 +1750,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/95/9b/da155eee3a21ecec2e1d6b78ca5fd2ee1936dcd36b0bf0b70d94b5ac6fce/langchain_core-1.1.1.tar.gz", hash = "sha256:029877a34ac5dedefe9c5c36e3c1206e56fc4cac6025df933277451b6df177ad" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/67/8d/99652acb7feaa4e16c9162429bc7a446f04749ef438aa02fce74b4319a00/langchain_core-1.1.2.tar.gz", hash = "sha256:75456c5cc10c3b53b80488bf5c6a4bcc3447b53e011533a8744bb0638b85dd78" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/56/22/d8dc366b13ad394a4abc1d61fbb3cc638c0d3f959ad7981889f1f47fd6fd/langchain_core-1.1.1-py3-none-any.whl", hash = "sha256:98c8cfe7a29448f9d987313be1afac2686e3d12f2f38be024ee9f729ff7cb87c" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/fb/68/2caf612e4b5e25d7938c96809b7ccbafb5906958bcad8c18d9211f092679/langchain_core-1.1.2-py3-none-any.whl", hash = "sha256:74dfd4dcc10a290e3701a64e35e0bea3f68420f5b7527820ced9414f5b2dc281" },
 ]
 
 [[package]]
@@ -1767,16 +1785,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "1.1.0"
+version = "1.1.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/18/29/cc7a7d1c42d19c903efa3ef9c9f00042942d28a00da1af12be5b7035375d/langchain_openai-1.1.0.tar.gz", hash = "sha256:9a33280c2e8315d013d64e6b15e583be347beb0d0f281755c335ae504ad0c184" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/05/38/c6517187ea5f0db6d682083116a020409b01eef0547b4330542c117cd25d/langchain_openai-1.1.1.tar.gz", hash = "sha256:72aa7262854104e0b2794522a90c49353c79d0132caa1be27ef253852685d5e7" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/da/ff/82699ef76f36818d86571a0b086ce07af5503a63d7430fc49e7d6aeb5dc1/langchain_openai-1.1.0-py3-none-any.whl", hash = "sha256:243bb345d0260ea1326c2b6ac2237ec29f082ab457c59e9306bac349df4577e8" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/1d/95/d65d3e187cd717baeb62988ae90a995f93564657f67518fb775af4090880/langchain_openai-1.1.1-py3-none-any.whl", hash = "sha256:69b9be37e6ae3372b4d937cb9365cf55c0c59b5f7870e7507cb7d802a8b98b30" },
 ]
 
 [[package]]
@@ -2244,11 +2262,11 @@ wheels = [
 
 [[package]]
 name = "networkx"
-version = "3.6"
+version = "3.6.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/e8/fc/7b6fd4d22c8c4dc5704430140d8b3f520531d4fe7328b8f8d03f5a7950e8/networkx-3.6.tar.gz", hash = "sha256:285276002ad1f7f7da0f7b42f004bcba70d381e936559166363707fdad3d72ad" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/07/c7/d64168da60332c17d24c0d2f08bdf3987e8d1ae9d84b5bbd0eec2eb26a55/networkx-3.6-py3-none-any.whl", hash = "sha256:cdb395b105806062473d3be36458d8f1459a4e4b98e236a66c3a48996e07684f" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762" },
 ]
 
 [[package]]
@@ -4039,11 +4057,11 @@ wheels = [
 
 [[package]]
 name = "urllib3"
-version = "2.6.0"
+version = "2.6.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/1c/43/554c2569b62f49350597348fc3ac70f786e3c32e7f19d266e19817812dd3/urllib3-2.6.0.tar.gz", hash = "sha256:cb9bcef5a4b345d5da5d145dc3e30834f58e8018828cbc724d30b4cb7d4d49f1" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/5e/1d/0f3a93cca1ac5e8287842ed4eebbd0f7a991315089b1a0b01c7788aa7b63/urllib3-2.6.1.tar.gz", hash = "sha256:5379eb6e1aba4088bae84f8242960017ec8d8e3decf30480b3a1abdaa9671a3f" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/56/1a/9ffe814d317c5224166b23e7c47f606d6e473712a2fad0f704ea9b99f246/urllib3-2.6.0-py3-none-any.whl", hash = "sha256:c90f7a39f716c572c4e3e58509581ebd83f9b59cced005b7db7ad2d22b0db99f" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/bc/56/190ceb8cb10511b730b564fb1e0293fa468363dbad26145c34928a60cb0c/urllib3-2.6.1-py3-none-any.whl", hash = "sha256:e67d06fe947c36a7ca39f4994b08d73922d40e6cca949907be05efa6fd75110b" },
 ]
 
 [[package]]

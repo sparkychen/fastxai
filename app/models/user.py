@@ -1,30 +1,98 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text, func
+from sqlalchemy import String, Boolean, DateTime, JSON, Column, Integer, Text, func, Index, Enum as SqlEnum
 from datetime import datetime
 import sqlalchemy as sa
-import uuid
+from pydantic import field_validator
 from typing import Optional, Dict, List, Any
-from datetime import datetime
 from pydantic import EmailStr, ConfigDict
-from sqlmodel import SQLModel, Field, DateTime
+from sqlmodel import SQLModel, Field
+from fastapi_users import schemas
 from enum import Enum
+import re
+
+# 手机号正则表达式（复用）
+PHONE_REGEX = re.compile(r"^1[3-9]\d{9}$")
+
+class UserRole(str, Enum):
+    """用户角色（企业级RBAC基础）"""
+    SUPERVISOR = "supervisor"
+    ADMIN = "admin"
+    OPERATOR = "operator"
+    USER = "user"
+    GUEST = "guest"
+
+class UserStatus(str, Enum):
+    """用户状态"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    LOCKED = "locked"
+
+class UserRead(schemas.BaseUser[int]):
+    """返回给前端的用户模型（脱敏）"""
+    username: str
+    phone: Optional[str]
+    role: UserRole
+    status: UserStatus
+    full_name: Optional[str]
+
+    # 脱敏手机号（企业级：中间4位隐藏）
+    @field_validator("phone")
+    def mask_phone(cls, v):
+        if v:
+            return f"{v[:3]}****{v[-4:]}"
+        return v
+
+class UserCreate(schemas.BaseUserCreate):
+    """创建用户入参模型（验证规则）"""
+    username: str = Field(min_length=8, max_length=20)
+    phone: Optional[str] = Field(None)  # 手机号正则
+    role: Optional[UserRole] = UserRole.USER
+    full_name: Optional[str] = Field(max_length=50)
+
+    # 用户名验证
+    @field_validator("username")
+    def validate_username(cls, v):
+        if not v.isalnum():
+            raise ValueError("用户名仅允许字母和数字")
+        return v
+    
+    @field_validator("phone")
+    def validate_phone(cls, v):
+        if v is None:  # 允许空值，跳过验证
+            return v
+        if not PHONE_REGEX.match(v):
+            raise ValueError("手机号格式错误（需为11位有效手机号）")
+        return v
+
+class UserUpdate(schemas.BaseUserUpdate):
+    """更新用户入参模型"""
+    username: Optional[str] = Field(min_length=8, max_length=20)
+    phone: Optional[str] = Field(None)
+    role: Optional[UserRole]
+    status: Optional[UserStatus]
+    full_name: Optional[str]
+
+    @field_validator("phone")
+    def validate_phone(cls, v):
+        if v is None:  # 允许空值，跳过验证
+            return v
+        if not PHONE_REGEX.match(v):
+            raise ValueError("手机号格式错误（需为11位有效手机号）")
+        return v
 
 class User(SQLModel, table=True):
     __tablename__ = "users" 
-    __table_args__ = (
-        sa.Table(
-            __tablename__,
-            SQLModel.metadata,
-            comment='系统用户主表，存储用户核心身份信息',
-            # 还可以在此添加其他参数，例如 schema='auth_schema'
-        ))
+    __table_args__ = {'comment': '系统用户主表，存储用户核心身份信息'}
     
-    id: Optional[int] = Field(default=None, sa_column=Column(Integer, primary_key=True, comment="唯一标识（自增主键）"))
+    id: Optional[int] = Field(default=None, sa_column=Column(Integer, primary_key=True, index=True, comment="唯一标识（自增主键）"))
     email: EmailStr = Field(sa_column=Column(String(100),unique=True,index=True,nullable=False,comment="用户邮箱（唯一）"))
-    # username: str = Field(unique=True, index=True, sa_column=Column(String(100), nullable=False, comment="用户名"))
+    username: str = Field(sa_column=Column(String(100), unique=True, index=True, nullable=False, comment="用户名"))
     hashed_password: str = Field(sa_column=Column(String(255), nullable=False, comment="用户密码(加密)"))
     full_name: Optional[str] = Field(sa_column=Column(String(100), nullable=True, comment="用户全名"))
+    phone: str = Field(sa_column=Column(String(11), unique=True, index=True, nullable=True, comment="用户手机号"))
+    role: UserRole = Field(sa_column=Column(SqlEnum(UserRole), default=UserRole.USER, comment="用户角色role"))
+    status: UserStatus = Field(sa_column=Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, comment="用户角色role"))
     is_active: bool = Field(sa_column=Column(Boolean, default=True, comment="是否是活跃状态"))
     is_superuser: bool = Field(sa_column=Column(Boolean, default=False, comment="是否是超级用户"))
     is_verified: bool = Field(sa_column=Column(Boolean, default=False, comment="是否已验证激活"))
@@ -52,30 +120,36 @@ class User(SQLModel, table=True):
     
     # OAuth and social login
     oauth_accounts: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, comment="用户oauth账号信息"))
-   
+    
+    __table_args__ = (
+        Index("idx_user_role_status", "role", "status"),  # 复合索引（角色+状态）
+    )
+
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, username={self.username})>"
     
 
-class MFABackupCode(SQLModel):
+class MFABackupCode(SQLModel, table=True):
     __tablename__ = "mfa_backup_codes"
+    __table_args__ = {'comment': 'MFA(code)信息备份表'}
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    code_hash = Column(String)  # 哈希后的备份代码
-    used = Column(Boolean, default=False)
-    used_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Optional[int] = Field(default=None, sa_column=Column(Integer, primary_key=True, index=True, comment="唯一标识（自增主键）"))
+    user_id: int = Field(sa_column=Column(Integer, index=True, comment="备份用户ID，用户唯一标识"))
+    code_hash: str = Field(sa_column=Column(String(100), nullable=True, comment="哈希后的备份代码"))
+    used: bool = Field(sa_column=Column(Boolean, default=False, comment="MFA(code)是否在用"))
+    used_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=True, comment="使用时间"))
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, comment="创建时间"))
 
-class LoginAttempt(SQLModel):
+class LoginAttempt(SQLModel, table=True):
     __tablename__ = "login_attempts"
+    __table_args__ = {'comment': '尝试或重试登录表'}
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    ip_address = Column(String)
-    user_agent = Column(Text)
-    successful = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Optional[int] = Field(default=None, sa_column=Column(Integer, primary_key=True, index=True, comment="唯一标识（自增主键）"))
+    user_id: int = Field(sa_column=Column(Integer, index=True, comment="尝试或重试登录用户ID，用户唯一标识"))
+    ip_address:str = Field(sa_column=Column(String(20), index=False, comment="尝试或重试登录用户IP"))
+    user_agent: str = Field(sa_column=Column(Text, index=False, comment="用户登录user_agent信息"))
+    successful:bool = Field(sa_column=Column(Boolean, default=False, comment="是否尝试或重试登录成功"))
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, comment="创建时间"))
 
 
 class MFAMethod(str, Enum):

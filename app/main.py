@@ -12,7 +12,7 @@ from app.core.middlewares import SecurityMiddleware
 from app.core.monitoring import SecurityMonitoringService
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from app.services.audit_service import AuditService, get_audit_service
+from app.services.audit_service import AuditService #get_audit_service
 from app.core.config import settings
 from uuid_extensions import uuid7
 from app.core.middlewares import StructuredLoggingMiddleware, AuditLogMiddleware
@@ -28,12 +28,23 @@ from starlette_prometheus import metrics, PrometheusMiddleware
 from fastapi_bgtasks_dashboard import mount_bg_tasks_dashboard
 from fastapi_profiler import PyInstrumentProfilerMiddleware
 from starlette.staticfiles import StaticFiles
+from app.models.user import User
+from fastapi_users import FastAPIUsers
+from app.services.user_service import auth_backend, get_user_manager
 from typing import Any
 import orjson
 # 初始化日志
 from app.core.logger import setup_strcutlogger
 
 logger = setup_strcutlogger()
+
+fastapi_users = FastAPIUsers[User, int](
+    get_user_manager,
+    [auth_backend],
+)
+# ========== 依赖：获取当前用户 ==========
+current_user = fastapi_users.current_user(active=True)
+current_superuser = fastapi_users.current_user(active=True, superuser=True)
 
 
 class CustomORJSONResponse(ORJSONResponse):
@@ -44,15 +55,11 @@ class CustomORJSONResponse(ORJSONResponse):
 
         )
 
-if settings.SENTRY_DNS:
-    from app.core.sentry import configure_sentry
-    configure_sentry()
-
 if sys.platform == "linux":
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-@auto_rw_separation
+# @auto_rw_separation
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
@@ -70,7 +77,10 @@ async def lifespan(app: FastAPI):
             if isinstance(route, APIRoute):
                 print(f"{route.methods}: path={route.path}, name={route.name}")
 
-    configure_sentry()
+    if settings.SENTRY_DNS:
+        from app.core.sentry import configure_sentry
+        configure_sentry()
+
     # 启动
     logger.info("Starting security-enhanced application")
 
@@ -163,16 +173,16 @@ app.add_exception_handler(Exception, generic_exception_handler)
 # from app.security.api_keys import validate_api_key
 from app.core.rbac import require_permission, Permission
 
-@app.get("/api/secure/status")
-async def secure_status(
-    api_key = Depends(validate_api_key)
-):
-    """安全状态端点（需要API密钥）"""
-    return {
-        "status": "secure",
-        "timestamp": datetime.utcnow().isoformat(),
-        "api_key_id": api_key.key_id,
-    }
+# @app.get("/api/secure/status")
+# async def secure_status(
+#     api_key = Depends(validate_api_key)
+# ):
+#     """安全状态端点（需要API密钥）"""
+#     return {
+#         "status": "secure",
+#         "timestamp": datetime.utcnow().isoformat(),
+#         "api_key_id": api_key.key_id,
+#     }
 
 @app.get("/api/secure/admin/metrics")
 async def admin_metrics(

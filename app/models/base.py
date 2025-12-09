@@ -2,8 +2,6 @@
 
 from sqlalchemy import Column, DateTime, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
-from app.database.postgres import Base
-import uuid
 from uuid_extensions import uuid7
 from sqlmodel import SQLModel, Field, DateTime
 

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "FastXAI-Multi-agents-system"
     APP_VERSION: str = "0.0.2"
     ROOT_DIR: Path = Path(__file__).parent.parent.parent    
-    ENV: Literal["dev", "dtaging", "prod"] = "prod"
+    ENV: Literal["dev", "dtaging", "prod"] = "dev"
     API_PREFIX: str = "/api/v1"
 
     # APP config
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
 
     # 日志文件配置（生产级轮转）
     # 基础配置
-    LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    # LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     FORMAT: Literal["json", "console"] = "json"  # prod=json, dev=console
     ENABLE_ASYNC: bool = True                    # 生产环境开启异步日志
     ASYNC_BATCH_SIZE: int = 100                  # 异步批量写入大小
@@ -203,7 +203,7 @@ class Settings(BaseSettings):
     ARGON2_MEMORY_COST: int = 102400  # Argon2 内存成本（越高越安全）
     ARGON2_TIME_COST: int = 3         # 时间成本
     ARGON2_PARALLELISM: int = 4       # 并行度
-    PASSWORD_HASH_ALGORITHM: str = "bcrypt"  # 慢哈希算法
+    PASSWORD_HASH_ALGORITHM: str = "scrypt"
     PASSWORD_BCRYPT_ROUNDS: int = 14  # 计算强度（越高越安全，性能需平衡）
         
     # 速率限制（防暴力破解）

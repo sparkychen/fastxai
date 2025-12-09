@@ -20,6 +20,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
+
 # ========== 企业级JWT策略（非对称加密+黑名单） ==========
 class EnterpriseJWTStrategy(JWTStrategy):
     async def read_token(self, token: str, request: Request | None = None) -> dict | None:

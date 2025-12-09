@@ -152,7 +152,7 @@ class AuditService:
         await self.log_event(event)
 
 
-# FastAPI依赖项
-async def get_audit_service(db: AsyncSession = Depends(get_db)) -> AuditService:
-    """获取审计服务依赖项"""
-    return AuditService(db)
+# # FastAPI依赖项
+# async def get_audit_service(db: AsyncSession = Depends(get_db)) -> AuditService:
+#     """获取审计服务依赖项"""
+#     return AuditService(db)

@@ -5,7 +5,7 @@ import time
 import asyncio
 from app.core.config import settings
 # from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker, AsyncEngine
@@ -53,7 +53,7 @@ class DatabaseManager:
                 return
             
             engine_kwargs = {
-                "poolclass": QueuePool,
+                # "poolclass": AsyncAdaptedQueuePool,
                 "pool_size": settings.DB_POOL_SIZE,
                 "max_overflow": settings.DB_MAX_OVERFLOW,
                 "pool_recycle": settings.DB_POOL_RECYCLE,
@@ -64,7 +64,7 @@ class DatabaseManager:
                 "echo_pool": False,  # 关闭连接池日志
                 "future": True, # 启用 SQLAlchemy 2.0 模式
                 # "json_serializer": orjson.dumps,  # 如果用 JSON 字段
-                "json_serializer": lambda obj: orjson.dumps(obj).decode(),
+                "json_serializer": lambda obj: orjson.dumps(obj).decode("utf-8"),
                 "json_deserializer": orjson.loads,
                 "connect_args": {
                     "server_settings": {
@@ -76,9 +76,11 @@ class DatabaseManager:
             }
 
             # 1. 初始化多主库
-            if not settings.db_write_dsns:
+            if not settings.DB_WRITE_DSN:
                 raise ValueError("No write DSNs configured")
+            logger.info(f"settings.DB_WRITE_DSN: {settings.DB_WRITE_DSN}")
             for idx, dsn in enumerate(settings.DB_WRITE_DSN):
+                logger.info(f"idx({idx}) -> dsn({dsn})")
                 try:
                     engine = create_async_engine(dsn, **engine_kwargs)
                     self._write_engines.append(engine)
@@ -96,7 +98,7 @@ class DatabaseManager:
                     logger.error(f"Process {self.process_id}: Failed to init write engine {idx}", error=str(e))
 
             # 2. 初始化多从库
-            if settings.DB_ENABLE_RW_SEPARATION and settings.D1800B_READ_DSNS:
+            if settings.DB_ENABLE_RW_SEPARATION and settings.DB_READ_DSNS:
                 for idx, dsn in enumerate(settings.DB_READ_DSNS):
                     try:
                         engine = create_async_engine(dsn, **engine_kwargs)
@@ -378,6 +380,8 @@ async def init_db_schema():
         raise RuntimeError("DB manager not initialized")
     try:
         # 使用当前主库初始化表结构
+        print(f"db_manager._current_write_idx: {db_manager._current_write_idx}")
+        print(f"db_manager._write_engines({len(db_manager._write_engines)}): {db_manager._write_engines}")
         async with db_manager._write_engines[db_manager._current_write_idx].begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info(f"Process {db_manager.process_id}: DB schema initialized")
@@ -394,8 +398,7 @@ async def db_health_check():
     return health
 
 async def startup_db():
-    if not db_manager._initialized:
-        raise RuntimeError("DB manager not initialized")
+    print(db_manager._initialized)
     await db_manager.init()
     if settings.ENV == "dev":
         await init_db_schema()
