@@ -10,9 +10,7 @@ from app.core.config import settings
 # from app.models.audit import AuditEventType, AuditEventSeverity
 from app.services.audit_service import AuditService, AuditEventType, AuditEventSeverity
 from pydantic import BaseModel
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 # Prometheus指标
 SECURITY_EVENTS_TOTAL = Counter(

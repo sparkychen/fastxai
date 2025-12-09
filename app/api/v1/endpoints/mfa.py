@@ -13,10 +13,7 @@ from crud.user_crud import get_user_by_id, update_user_password
 from services.mfa_service import verify_mfa_code
 from dependencies import limiter, check_mfa_lock
 from utils.redis_client import reset_mfa_failed_attempts
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 router = APIRouter(prefix="/user", tags=["用户管理"])
 

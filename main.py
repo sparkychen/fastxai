@@ -7,7 +7,7 @@ import uvicorn
 from app.core.config import settings
 import multiprocessing
 from uuid_extensions import uuid7
-
+import secrets
 
 def get_cpu_cores():
     try:
@@ -17,10 +17,7 @@ def get_cpu_cores():
         # Windows 兜底
         return 4
 
-
 if __name__ == "__main__":
-    # 生产环境配置
-    print(str(uuid7()))
     uvicorn_config = {
         "host": settings.APP_HOST,
         "port": settings.APP_PORT,
@@ -31,7 +28,7 @@ if __name__ == "__main__":
         "timeout_keep_alive": 30,  # 连接保持超时
         "timeout_graceful_shutdown": 30,
         "log_level": settings.LOG_LEVEL.lower(),
-        "access_log": False,  # 禁用访问日志（使用结构化日志）
+        "access_log": False,
         "log_config": None,
         "reload_dirs": ["app"],
         "reload_excludes": ["*.tmp", "*.log", "*.err", "tests/*"],

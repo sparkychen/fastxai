@@ -36,3 +36,8 @@ vllm serve /opt/models/hf/Qwen/Qwen3-4B-Thinking-2507-FP8 --tensor-parallel-size
 # 编译dolphinscheduler-3.1.9 src源码，在windows上编译：(mvn spotless:apply)
 mvn clean package -DskipTests -D"spotless.check.skip"=true -X -e
 
+
+CREATE USER postgres123 WITH PASSWORD 'pgsAdmin@123';
+GRANT CREATE ON SCHEMA public TO postgres123;
+GRANT ALL PRIVILEGES ON DATABASE fastxai TO postgres123;
+

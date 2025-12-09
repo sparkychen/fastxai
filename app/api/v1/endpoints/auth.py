@@ -27,10 +27,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.utils.redis_client import get_mfa_failed_attempts
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 router = APIRouter(prefix=settings.API_PREFIX)
 # 限流器（基于IP）

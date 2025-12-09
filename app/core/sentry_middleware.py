@@ -8,10 +8,7 @@ import sentry_sdk
 from contextvars import ContextVar
 from typing import Dict, Any
 from uuid_extensions import uuid7
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 # 上下文变量用于请求追踪
 current_request_id: ContextVar[str] = ContextVar("request_id", default="")

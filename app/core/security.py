@@ -12,9 +12,7 @@ from src.domain.repositories.user import UserRepository
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
 from app.database.redis import get_redis_client
 from app.services.auth_service import increment_auth_metric
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")

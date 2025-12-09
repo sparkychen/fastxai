@@ -4,7 +4,6 @@ import os
 import time
 import asyncio
 from app.core.config import settings
-# from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -12,11 +11,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from functools import lru_cache, wraps
 from sqlalchemy import MetaData, text
 from sqlmodel import SQLModel
+from contextlib import asynccontextmanager
 import orjson
 import random
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_N_name)s",
@@ -29,7 +27,6 @@ NAMING_CONVENTION = {
 # class Base(DeclarativeBase):
 #     __abstract__ = True
 #     metadata = MetaData(naming_convention=NAMING_CONVENTION)
-
 
 class DatabaseManager:
     def __init__(self, process_id: int):
@@ -54,26 +51,25 @@ class DatabaseManager:
                 return
             
             engine_kwargs = {
-                # "poolclass": AsyncAdaptedQueuePool,
                 "pool_size": settings.DB_POOL_SIZE,
                 "max_overflow": settings.DB_MAX_OVERFLOW,
                 "pool_recycle": settings.DB_POOL_RECYCLE,
                 "pool_timeout": settings.DB_POOL_TIMEOUT,
-                "pool_pre_ping": settings.DB_PRE_PING,
+                "pool_pre_ping": settings.DB_POOL_PRE_PING,
                 "pool_use_lifo": settings.DB_POOL_USE_LIFO,
                 "echo": settings.DB_ECHO,
                 "echo_pool": False,  # 关闭连接池日志
                 "future": True, # 启用 SQLAlchemy 2.0 模式
-                # "json_serializer": orjson.dumps,  # 如果用 JSON 字段
                 "json_serializer": lambda obj: orjson.dumps(obj).decode("utf-8"),
                 "json_deserializer": orjson.loads,
                 "connect_args": {
+                    "timeout": 10,  # 连接超时10秒
+                    "command_timeout": 30,
                     "server_settings": {
-                        "application_name": settings.APP_NAME,
+                        "application_name": str(settings.APP_NAME),
                         "timezone": "UTC",
-                        "charset": "utf8mb4",
                     }
-                },
+                },                
             }
 
             # 1. 初始化多主库
@@ -97,7 +93,10 @@ class DatabaseManager:
                     )
                 except Exception as e:
                     logger.error(f"Process {self.process_id}: Failed to init write engine {idx}", error=str(e))
-
+            
+            if not self._write_engines:
+                raise RuntimeError("No valid write engines initialized")
+            
             # 2. 初始化多从库
             if settings.DB_ENABLE_RW_SEPARATION and settings.DB_READ_DSNS:
                 for idx, dsn in enumerate(settings.DB_READ_DSNS):
@@ -117,9 +116,9 @@ class DatabaseManager:
                     except Exception as e:
                         logger.error(f"Process {self.process_id}: Failed to init read engine {idx}", error=str(e))
                     
-                    if self._read_engines:
-                        self._slave_delays = [float("inf")] * len(self._read_engines)
-                        self._delay_refresh_task = asyncio.create_task(self._refresh_slave_delays())
+                if self._read_engines:
+                    self._slave_delays = [float("inf")] * len(self._read_engines)
+                    self._delay_refresh_task = asyncio.create_task(self._refresh_slave_delays())
 
             self._initialized = True
             logger.info(f"Process {self.process_id}: DB manager initialized (write: {len(self._write_engines)}, read: {len(self._read_engines)})")
@@ -209,9 +208,13 @@ class DatabaseManager:
         #     raise RuntimeError(f"Process {self.process_id}: All read engines are unavailable")
         if self._read_session_factories:
             read_only = False
-            async with self._get_best_read_session() as session:
+            session_factory = await self._get_best_read_session()
+            async with session_factory() as session:
                 yield session
                 return
+            # async with self._get_best_read_session() as session:
+            #     yield session
+            #     return
 
     async def _get_best_read_session(self) -> async_sessionmaker[AsyncSession]:
         """选择最优的从库会话工厂"""
@@ -223,7 +226,7 @@ class DatabaseManager:
         for idx, engine in enumerate(self._read_engines):
             if not await self._check_engine_health(engine):
                 continue
-            delay = await self._slave_delays(engine)
+            delay = self._slave_delays[idx]
             # 计算权重：延迟越低，权重越高（示例算法，可调整）
             if delay < settings.DB_SLAVE_DELAY_THRESHOLD:
                 # 假设权重与延迟成反比，并考虑一个基础权重
@@ -275,7 +278,7 @@ class DatabaseManager:
             "pool_size": pool.size(),
             "checked_out": pool.checkedout(),
             "overflow": pool.overflow(),
-            "recycle": pool.recycle,
+            "recycle": pool._recycle,
             "pre_ping": pool._pre_ping
         }
 
@@ -376,6 +379,11 @@ def db_retry_decorator(max_attempts: int = 3):
         return wrapper
     return decorator
 
+# @retry(
+#     stop=stop_after_attempt(5),
+#     wait=wait_exponential(multiplier=1, min=2, max=10),
+#     retry=retry_if_exception_type(Exception),
+# )
 async def init_db_schema():
     if not db_manager._initialized:
         raise RuntimeError("DB manager not initialized")
@@ -383,6 +391,11 @@ async def init_db_schema():
         # 使用当前主库初始化表结构
         print(f"db_manager._current_write_idx: {db_manager._current_write_idx}")
         print(f"db_manager._write_engines({len(db_manager._write_engines)}): {db_manager._write_engines}")
+        # write_factory = db_manager._write_session_factories[db_manager._current_write_idx]
+        # async with write_factory() as session:
+        #     async with session.begin():
+        #         await session.run_sync(SQLModel.metadata.create_all)
+        # logger.info(f"Process {db_manager.process_id}: DB schema initializ
         async with db_manager._write_engines[db_manager._current_write_idx].begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
         logger.info(f"Process {db_manager.process_id}: DB schema initialized")
@@ -458,8 +471,11 @@ def auto_rw_separation(func):
     return wrapper
 
 #### 以下是制动切换demo 自动切换的依赖注入
+@asynccontextmanager
 async def get_auto_rw_db() -> AsyncGenerator[AsyncSession, None]:
     """自动切换主/从库的会话依赖"""
+    if not db_manager._initialized:
+        raise RuntimeError("Database manager not initialized")
     # 初始默认读从库，有写操作时自动切主库
     async for session in db_manager.get_session(read_only=True):
         yield session

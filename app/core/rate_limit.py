@@ -9,10 +9,7 @@ from limits.strategies import FixedWindowRateLimiter
 from fastapi import FastAPI, Request, HTTPException
 from redis.asyncio import Redis, RedisCluster
 from app.core.config import settings
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 # ================= 分布式速率限制 =================
 class RedisRateLimiter:

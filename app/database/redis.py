@@ -3,9 +3,7 @@
 from redis.asyncio import Redis, RedisCluster
 import structlog
 from app.core.config import settings
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 # 全局Redis客户端（单例）
 _redis_client = None

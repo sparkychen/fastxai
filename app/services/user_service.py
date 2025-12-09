@@ -2,11 +2,10 @@
 
 # app/managers/user_manager.py
 import re
-import structlog
+from datetime import datetime
 from fastapi import Request, HTTPException, Depends, status
 from fastapi_users.password import PasswordHelper
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
-from app.models.user import User
 from app.core.config import settings
 from app.database.redis import get_redis_client
 # from app.core.auth import increment_auth_metric
@@ -15,17 +14,18 @@ from fastapi_users import BaseUserManager, IntegerIDMixin, schemas, exceptions, 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.user import User
+from typing import Optional
 from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,
     JWTStrategy,
 )
+from .mfa_service import mfa_service
 from passlib.context import CryptContext
 # from fastapi_users.db.sqlalchemy import SQLAlchemyAccessTokenDatabase  # 修正导入
 # from fastapi_users.db.sqlalchemy import AccessToken  # 修正：AccessToken模型从这里导入
 from app.core.config import settings
-
-logger = structlog.get_logger("user_manager")
+from app.core.logger import logger
 
 # 企业级Argon2密码哈希器（参数调优）
 argon2_hasher = CryptContext(schemes=["argon2"])
@@ -130,13 +130,13 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
                 detail=f"用户状态异常：{user.status}",
             )
         # 长度检查
-        if len(password) < settings.PASSWORD_MIN_LENGTH:
-            raise ValueError(f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters")
+        if len(password) < settings.PASSWORD_MIN_LENGTH and len(password) > settings.PASSWORD_MAX_LENGTH:
+            raise ValueError(f"Password must be in [{settings.PASSWORD_MIN_LENGTH}, settings.PASSWORD_MAX_LENGTH] characters")
         # 包含大写字母
-        if settings.PASSWORD_REQUIRE_UPPER and not re.search(r"[A-Z]", password):
+        if settings.PASSWORD_REQUIRE_UPPERCASE and not re.search(r"[A-Z]", password):
             raise ValueError("Password must contain at least one uppercase letter")
         # 包含数字
-        if settings.PASSWORD_REQUIRE_NUMBER and not re.search(r"\d", password):
+        if settings.PASSWORD_REQUIRE_DIGITS and not re.search(r"\d", password):
             raise ValueError("Password must contain at least one number")
         # 包含特殊字符
         if settings.PASSWORD_REQUIRE_SPECIAL and not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
@@ -155,6 +155,12 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             tenant_id=str(user.tenant_id),
             ip=request.client.host if request else "unknown"
         )
+        logger.info("User registered", user_id=user.id, email=user.email)
+        if settings.MFA_REQUIRED and not user.mfa_secret:
+            # 生成MFA密钥
+            secret = mfa_service.generate_secret(user)
+            await self.user_db.update(user)
+            logger.info("MFA secret generated for user", user_id=user.id)
         increment_auth_metric("user_register")
 
     async def on_after_login(
@@ -168,6 +174,10 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             ip=request.client.host if request else "unknown",
             token=token[:20] + "..." if token else None
         )
+        """登录后钩子：记录登录日志"""
+        user.last_login_at = datetime.now(UTC)
+        await self.user_db.update(user)
+        logger.info("User logged in", user_id=user.id, ip=request.client.host if request else None)
         increment_auth_metric("user_login")
 
     async def on_after_request_reset_password(self, user: User, token: str, request: Request | None = None):
@@ -179,14 +189,27 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         )
         increment_auth_metric("password_reset_request")
 
-    # ========== 多租户隔离 ==========
-    async def create(self, user_create, safe: bool = False, request: Request | None = None) -> User:
-        """重写创建用户，强制租户隔离"""
-        if settings.MULTI_TENANT_ENABLED and not hasattr(user_create, "tenant_id"):
-            # 从请求中提取租户ID（如Header/Tenant域名）
-            tenant_id = request.headers.get("X-Tenant-ID", settings.DEFAULT_TENANT_ID)
-            user_create.tenant_id = tenant_id
-        return await super().create(user_create, safe, request)
+    async def on_after_logout(self, user: User, token: str, request: Optional[Request] = None):
+        """登出后钩子：加入黑名单"""
+        # 解析令牌过期时间
+        try:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            )
+            expires_at = datetime.fromtimestamp(payload["exp"], UTC)
+            await token_blacklist.add_token(token, expires_at)
+        except Exception as e:
+            logger.error("Failed to blacklist token", error=str(e))
+        logger.info("User logged out", user_id=user.id)
+
+    # # ========== 多租户隔离 ==========
+    # async def create(self, user_create, safe: bool = False, request: Request | None = None) -> User:
+    #     """重写创建用户，强制租户隔离"""
+    #     if settings.MULTI_TENANT_ENABLED and not hasattr(user_create, "tenant_id"):
+    #         # 从请求中提取租户ID（如Header/Tenant域名）
+    #         tenant_id = request.headers.get("X-Tenant-ID", settings.DEFAULT_TENANT_ID)
+    #         user_create.tenant_id = tenant_id
+    #     return await super().create(user_create, safe, request)
 
 # ========== 依赖注入 ==========
 # async def get_user_db(session=Depends(get_write_db)):

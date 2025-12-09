@@ -3,10 +3,7 @@
 from fastapi import Request, HTTPException, FastAPI
 from fastapi.responses import ORJSONResponse
 import sentry_sdk
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 async def http_exception_handler(request: Request, exc: HTTPException):
     """结构化HTTP异常日志"""

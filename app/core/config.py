@@ -11,6 +11,7 @@ from pydantic import EmailStr, SecretStr, Field
 from cryptography.fernet import Fernet
 from urllib.parse import quote_plus
 from uuid_extensions import uuid7
+import secrets
 
 class Settings(BaseSettings):
     
@@ -31,8 +32,8 @@ class Settings(BaseSettings):
     # 主库（写）DSN
     DB_MASTER_HOST: str = "localhost"
     DB_MASTER_PORT: int = 5432
-    DB_MASTER_USER: str = "postgres"
-    DB_MASTER_PASSWORD: str = quote_plus("postgresAdmin")
+    DB_MASTER_USER: str = "postgres123"
+    DB_MASTER_PASSWORD: str = quote_plus("pgsAdmin@123")
     DB_NAME: str = "fastxai"
     DB_MASTER_URL: str = f"postgresql+asyncpg://{DB_MASTER_USER}:{DB_MASTER_PASSWORD}@{DB_MASTER_HOST}:{DB_MASTER_PORT}/{DB_NAME}"
     DB_WRITE_DSN: List[str] = [DB_MASTER_URL]
@@ -188,6 +189,7 @@ class Settings(BaseSettings):
     MFA_VALID_WINDOW: int = 1  # TOTP验证窗口（±30秒，避免网络延迟）
     MFA_MAX_FAILED_ATTEMPTS: int = 5  # 最大失败次数
     MFA_LOCK_DURATION_MINUTES: int = 15  # 锁定时长（分钟）
+    MFA_SECRET_KEY: str = "JmVILYLpPDcxO7tTC-8Y1NYKARma8rb1_z2-lPIZ8UMj1E2-ytoEt7vu4YeG9XgOe0Z1JnJE8-9munUP-P6Qow"
     
     # 密码策略（企业级强化）
     PASSWORD_MIN_LENGTH: int = 9
@@ -199,7 +201,6 @@ class Settings(BaseSettings):
     PASSWORD_HISTORY_SIZE: int = 5
     MAX_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_MINUTES: int = 30
-    PASSWORD_REQUIRE_SPECIAL: bool = True
     ARGON2_MEMORY_COST: int = 102400  # Argon2 内存成本（越高越安全）
     ARGON2_TIME_COST: int = 3         # 时间成本
     ARGON2_PARALLELISM: int = 4       # 并行度
@@ -429,6 +430,9 @@ class KeyManagementService:
 
 settings = Settings()
 # key_manager = KeyManagementService()
+
+# mfa_secret_key = secrets.token_urlsafe(64)
+# print(f"生成的MFA_SECRET_KEY: {mfa_secret_key}")
 
 # # 动态调整日志配置（根据环境）
 # if settings.ENV == "dev":

@@ -4,11 +4,8 @@ from typing import List, Optional, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 import numpy as np
-import structlog
-
-from app.config.settings import settings
-
-logger = structlog.get_logger()
+from app.core.config import settings
+from app.core.logger import logger
 
 class VectorService:
     """Service for vector database operations"""

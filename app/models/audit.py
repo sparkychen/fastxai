@@ -9,7 +9,6 @@ from pydantic import EmailStr, ConfigDict
 from sqlmodel import SQLModel, Field
 from app.core.config import settings
 
-
 class AuditEventType(str, Enum):
     """审计事件类型"""
     USER_LOGIN = "USER_LOGIN"

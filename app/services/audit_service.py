@@ -7,9 +7,7 @@ from app.models.audit import AuditEvent, AuditEventSeverity, AuditLog, AuditEven
 from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 class AuditService:
     """审计服务"""

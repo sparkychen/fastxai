@@ -18,13 +18,15 @@ from uuid import uuid4
 from datetime import datetime
 from structlog.contextvars import bind_contextvars, clear_contextvars, merge_contextvars
 
-# # 使用 contextvars 替代 ThreadLocalDict
-# request_id_var: ContextVar[str] = ContextVar("request_id", default="")
-# trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
-# user_id_var: ContextVar[str] = ContextVar("user_id", default="")
-# session_id_var: ContextVar[str] = ContextVar("session_id", default="")
-# client_ip_var: ContextVar[str] = ContextVar("client_ip", default="")
-# correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
+# 使用 contextvars 替代 ThreadLocalDict
+request_id_var: ContextVar[str] = ContextVar("request_id", default="")
+trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
+user_id_var: ContextVar[str] = ContextVar("user_id", default="")
+session_id_var: ContextVar[str] = ContextVar("session_id", default="")
+client_ip_var: ContextVar[str] = ContextVar("client_ip", default="")
+correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
+endpoint_var: ContextVar[str] = ContextVar("endpoint", default="")
+
 
 # class AuditEventType(Enum):
 #     AUTHENTICATION = "authentication"
@@ -183,8 +185,13 @@ def configure_file_logger():
 
 def setup_strcutlogger():
     bind_contextvars(
-        request_id="request_id",
-        user_id="user_id"
+        request_id="request_id",  # 这里"request_id"是contextvars变量名
+        trace_id="trace_id",
+        user_id="user_id",
+        session_id="session_id",
+        client_ip="client_ip",
+        correlation_id="correlation_id",
+        endpoint="endpoint"
     )
 
     structlog.configure(
@@ -202,6 +209,7 @@ def setup_strcutlogger():
             SensitiveFilter(sensitive_fields=settings.AUDIT_LOG_SENSITIVE_FIELDS),
             # structlog.stdlib.filter_by_level,
             structlog.processors.JSONRenderer(),
+            # structlog.dev.ConsoleRenderer(), # 设置后会报错
         ],
         # wrapper_class=structlog.make_filtering_bound_logger(logging.INFO)
         logger_factory=lambda name: loguru_logger.bind(name=name),
@@ -291,7 +299,8 @@ class AsyncLogProcessor:
             structlog.get_logger("async_logger").error("Async log enqueue failed", error=str(e))
             return event_dict  # 降级为同步输出
 
-# logger = setup_strcutlogger()
+logger = setup_strcutlogger()
+
 # 审计日志专用 logger
 # audit_logger = structlog.get_logger("AUDIT")
 

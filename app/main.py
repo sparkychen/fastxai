@@ -15,12 +15,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.services.audit_service import AuditService #get_audit_service
 from app.core.config import settings
 from uuid_extensions import uuid7
-from app.core.middlewares import StructuredLoggingMiddleware, AuditLogMiddleware
 from app.database.postgres import startup_db, shutdown_db, get_auto_rw_db, auto_rw_separation
 from app.database.redis import get_redis_client, close_redis_client
 # from fastapi_structlog import init_logging, StructlogMiddleware, AccessLogMiddleware, CurrentScopeSetMiddleware
-# from app.middleware.logging import RequestContextLoggingMiddleware
-# from app.middleware.tracing import TracingMiddleware
 from app.core.handlers import http_exception_handler, generic_exception_handler
 from asgi_correlation_id import CorrelationIdMiddleware  # 需额外安装：pip install asgi-correlation-id
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -33,10 +30,7 @@ from fastapi_users import FastAPIUsers
 from app.services.user_service import auth_backend, get_user_manager
 from typing import Any
 import orjson
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 fastapi_users = FastAPIUsers[User, int](
     get_user_manager,
@@ -133,37 +127,15 @@ app.add_middleware(PyInstrumentProfilerMiddleware, is_print_each_request=True)
 app.add_route("/metrics", metrics)  
 Instrumentator().instrument(app).expose(app, endpoint="/jjxxzx/metrics")
 # FastAPIInstrumentor.instrument_app(app)
-# app.add_middleware(CurrentScopeSetMiddleware)  # 1. 设置上下文
 app.add_middleware(
     CorrelationIdMiddleware,
     header_name="X-Request-ID",  # 可配置为任意头名称
     # 可选：自定义ID生成器
     generator=lambda: uuid7().hex,
 )    # 2. 生成请求ID
-app.add_middleware(StructuredLoggingMiddleware)        # 3. 将请求ID注入日志上下文
-app.add_middleware(AuditLogMiddleware)                 # 4. 记录访问日志（格式可自定义[citation:1]）
-
-# 1. CORS中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,  # 生产环境严格限制
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
-)
-# 2. GZip压缩（提升传输性能）
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-# 3. 结构化日志中间件
-app.add_middleware(StructuredLoggingMiddleware)
 
 # 设置安全中间件
 SecurityMiddleware.setup_security_middleware(app)
-
-# # 2. 分布式追踪中间件（先于日志中间件）
-# if settings.TRACING_ENABLE:
-#     app.add_middleware(TracingMiddleware)
-# 3. 请求上下文日志中间件（核心）
-# app.add_middleware(RequestContextLoggingMiddleware)
 
 # ========== 3. 注册异常处理器 ==========
 app.add_exception_handler(HTTPException, http_exception_handler)
@@ -184,17 +156,17 @@ from app.core.rbac import require_permission, Permission
 #         "api_key_id": api_key.key_id,
 #     }
 
-@app.get("/api/secure/admin/metrics")
-async def admin_metrics(
-    current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))
-):
-    """管理员指标端点（需要管理员权限）"""
-    # 返回安全指标
-    return {
-        "active_sessions": ACTIVE_SESSIONS._value.get(),
-        "security_events": SECURITY_EVENTS_TOTAL._metrics,
-        "failed_logins": FAILED_LOGIN_ATTEMPTS._value.get(),
-    }
+# @app.get("/api/secure/admin/metrics")
+# async def admin_metrics(
+#     current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))
+# ):
+#     """管理员指标端点（需要管理员权限）"""
+#     # 返回安全指标
+#     return {
+#         "active_sessions": ACTIVE_SESSIONS._value.get(),
+#         "security_events": SECURITY_EVENTS_TOTAL._metrics,
+#         "failed_logins": FAILED_LOGIN_ATTEMPTS._value.get(),
+#     }
 
 @app.get("/api/secure/alerts")
 async def get_security_alerts(

@@ -6,9 +6,8 @@ from fastapi import HTTPException, status, Depends
 from enum import Enum
 from app.services.auth_service import auth_service
 from app.models.user import User
-from app.core.logger import setup_strcutlogger
+from app.core.logger import logger
 
-logger = setup_strcutlogger()
 
 class Permission(str, Enum):
     """系统权限枚举"""

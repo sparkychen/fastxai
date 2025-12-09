@@ -17,13 +17,11 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import re
 from app.services.auth_service import auth_service
-import structlog
+# from app.middleware.tracing import TracingMiddleware
 from fastapi import Request, Response, HTTPException, FastAPI, status
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 class SecurityHeadersConfig:
     """安全头部配置类"""    
@@ -77,7 +75,6 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[settings.API_RATE_LIMIT]
 )
-
 
 
 class SecurityMiddleware:
@@ -332,40 +329,6 @@ class RateLimitMiddleware:
         await self.app(scope, receive, send)
 
 
-# ================= 1. 请求ID中间件 =================
-class RequestIdMiddleware(BaseHTTPMiddleware):
-    """为每个请求生成唯一ID，便于追踪"""
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID", str(uuid7()))
-        structlog.contextvars.bind_contextvars(request_id=request_id)
-        request.state.request_id = request_id
-        
-        # 记录请求开始
-        start_time = time.time()
-        logger.info(
-            "Request started",
-            method=request.method,
-            path=request.url.path,
-            client_ip=request.client.host,
-            user_agent=request.headers.get("User-Agent", "")
-        )
-        
-        # 处理请求
-        response = await call_next(request)
-        
-        # 记录请求结束
-        process_time = time.time() - start_time
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Process-Time"] = str(process_time)
-        logger.info(
-            "Request completed",
-            status_code=response.status_code,
-            process_time=f"{process_time:.4f}s"
-        )
-        
-        structlog.contextvars.clear_contextvars()
-        return response
-
 # ================= 2. 安全头部中间件 =================
 def get_security_headers_config() -> SecurityHeadersConfig:
     """安全头部配置（防XSS/点击劫持等）"""
@@ -431,7 +394,7 @@ def setup_security_middlewares(app: FastAPI):
     )
     
     # 请求ID
-    app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(StructuredLoggingMiddleware)
     
     # 安全头部
     if settings.SECURITY_HEADERS_ENABLED:
@@ -463,21 +426,36 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
     3. 记录请求耗时/状态码/端点
     4. 绑定用户ID/租户ID（认证后）
     """
+    #     structlog.contextvars.clear_contextvars()
+    
     async def dispatch(self, request: Request, call_next) -> Response:
         # ========== 1. 初始化请求上下文 ==========
-        request_id = str(uuid7())
-        start_time = time.time()
+        request_id = request.headers.get("X-Request-ID", str(uuid7()))
+        request.state.request_id = request_id
+        # 绑定分布式追踪ID（由tracing中间件生成）
+        trace_id = request.state.get("trace_id", "")
+        span_id = request.state.get("span_id", "")
+
+        # correlation_id="correlation_id"
+
+        start_time = time.time()        
         # 绑定基础上下文
         bind_contextvars(
             request_id=request_id,
             endpoint=f"{request.method} {request.url.path}",
             client_ip=request.client.host,
             user_agent=request.headers.get("User-Agent", "unknown"),
+            trace_id=trace_id,
+            span_id=span_id,
         )
-        # 绑定分布式追踪ID（由tracing中间件生成）
-        trace_id = request.state.get("trace_id", "")
-        span_id = request.state.get("span_id", "")
-        bind_contextvars(trace_id=trace_id, span_id=span_id)
+
+        logger.info(
+            "Request started",
+            method=request.method,
+            path=request.url.path,
+            client_ip=request.client.host,
+            user_agent=request.headers.get("User-Agent", "")
+        )
 
         # ========== 2. 处理请求 ==========
         try:
@@ -489,6 +467,15 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                     user_id=str(request.state.user.id),
                     tenant_id=str(request.state.user.tenant_id)
                 )
+            # 记录请求结束
+            process_time = time.time() - start_time
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Process-Time"] = str(process_time)
+            logger.info(
+                "Request completed",
+                status_code=response.status_code,
+                process_time=f"{process_time:.4f}s"
+            )
         except Exception as e:
             # 异常处理（结构化异常日志）
             status_code = 500
@@ -537,7 +524,6 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         response: Optional[Response] = None
         error_msg: Optional[str] = None
-
         try:
             # 获取当前用户（需根据实际认证逻辑调整）
             await self._get_current_user(request, audit_data)

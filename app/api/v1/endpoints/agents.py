@@ -3,7 +3,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
+from app.core.logger import logger
 
 from src.api.dependencies import get_current_user
 from src.config.database import get_db
@@ -18,7 +18,7 @@ from src.domain.schemas.agent import (
 )
 
 router = APIRouter(prefix="/agents", tags=["agents"])
-logger = structlog.get_logger()
+
 
 @router.post("/", response_model=AgentResponse)
 async def create_agent(

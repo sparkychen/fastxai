@@ -16,9 +16,7 @@ from sentry_sdk.envelope import Envelope
 from typing import Optional
 from structlog.contextvars import merge_contextvars
 # 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 def sentry_structlog_processor(logger, method_name, event_dict):
     """

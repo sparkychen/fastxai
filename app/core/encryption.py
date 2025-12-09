@@ -18,10 +18,7 @@ import base64
 import re
 from pydantic import field_validator, ValidationInfo
 from pydantic_core import PydanticCustomError
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 class DataEncryptor:
     """数据加密器"""

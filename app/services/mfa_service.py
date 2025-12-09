@@ -12,13 +12,15 @@ from redis.asyncio import Redis, RedisCluster
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.models.mfa_user import User, MFABackupCode
+from app.models.user import User, MFABackupCode, UserRole
 from passlib.context import CryptContext
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from fastapi import HTTPException, status
 from app.core.config import settings
-# 初始化日志
-from app.core.logger import setup_strcutlogger
-
-logger = setup_strcutlogger()
+from app.core.logger import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -74,8 +76,51 @@ class AuthService:
         return user
 
 class MFAService:
-    def __init__(self, redis: Redis):
-        self.redis = redis
+    def __init__(self, redis: Redis = None):
+        if Redis:
+            self.redis = redis
+        else:
+            self.redis = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self._key = self._generate_key()
+        self._fernet = Fernet(self._key)
+        self._cache = None  # 由依赖注入设置
+
+    def _generate_key(self) -> bytes:
+        """生成加密密钥（使用 MFA_SECRET_KEY）"""
+        salt = b"mfa_salt"
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        return base64.urlsafe_b64encode(kdf.derive(settings.MFA_SECRET_KEY.encode()))
+
+    """MFA服务（TOTP协议，兼容Google Authenticator）"""
+    @staticmethod
+    def generate_secret(user: User) -> str:
+        """生成MFA密钥"""
+        secret = pyotp.random_base32()
+        user.mfa_secret = secret  # 需在User模型添加mfa_secret字段
+        return secret
+
+    @staticmethod
+    def get_provisioning_uri(user: User, secret: str) -> str:
+        """生成MFA配置URI（用于扫码）"""
+        return pyotp.totp.TOTP(secret).provisioning_uri(
+            name=user.email,
+            issuer_name=settings.MFA_ISSUER_NAME
+        )
+
+    @staticmethod
+    async def verify_mfa_code(user: User, code: str) -> bool:
+        """验证MFA验证码"""
+        if not user.mfa_secret:
+            return False
+        totp = pyotp.totp.TOTP(user.mfa_secret)
+        # 允许30秒时间窗口（容错）
+        return totp.verify(code, valid_window=1)
     
     def generate_totp_secret(self) -> str:
         """生成 TOTP 密钥"""
@@ -152,79 +197,14 @@ class MFAService:
             MFABackupCode.user_id == user_id,
             MFABackupCode.code_hash == hashed_code,
             MFABackupCode.used == False
-        ).first()
-        
+        ).first()        
         if backup_code:
             backup_code.used = True
             backup_code.used_at = datetime.utcnow()
             db.commit()
-            return True
-        
+            return True        
         return False
-
-class MFAEnrollmentManager:
-    """MFA 注册管理器"""
     
-    def __init__(self, mfa_service: MFAService):
-        self.mfa_service = mfa_service
-    
-    async def start_enrollment(self, user: User) -> dict:
-        """开始 MFA 注册流程"""
-        secret = self.mfa_service.generate_totp_secret()
-        backup_codes = self.mfa_service.generate_backup_codes()
-        
-        # 存储临时注册数据（在实际实现中应加密存储）
-        enrollment_data = {
-            'secret': secret,
-            'backup_codes': backup_codes,
-            'created_at': datetime.utcnow().isoformat()
-        }
-        
-        # 生成 QR code
-        uri = self.mfa_service.get_totp_uri(secret, user.email)
-        qr_code = self.mfa_service.generate_qr_code(uri)
-        
-        return {
-            'qr_code': qr_code,
-            'secret': secret,  # 仅用于测试，生产环境不应返回
-            'backup_codes': backup_codes,
-            'manual_entry_key': secret  # 用于手动输入
-        }
-    
-
-import base64
-import pyotp
-import qrcode
-from io import BytesIO
-from typing import List, Tuple
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from fastapi import HTTPException, status
-from app.config import settings
-from app.db.session import get_db
-from app.db.models import User
-from sqlalchemy.orm import Session
-
-class MFAService2:
-
-    def __init__(self):
-        self._key = self._generate_key()
-        self._fernet = Fernet(self._key)
-        self._cache = None  # 由依赖注入设置
-
-    def _generate_key(self) -> bytes:
-        """生成加密密钥（使用 MFA_SECRET_KEY）"""
-        salt = b"mfa_salt"
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-            backend=default_backend()
-        )
-        return base64.urlsafe_b64encode(kdf.derive(settings.MFA_SECRET_KEY.encode()))
-
     def generate_secret(self) -> str:
         """生成安全的 MFA 密钥"""
         return pyotp.random_base32()
@@ -306,3 +286,81 @@ class MFAService2:
         # 生成二维码
         qr_code = self.generate_qr_code(user.email, secret)
         return qr_code, backup_codes
+
+class MFAEnrollmentManager:
+    """MFA 注册管理器"""
+    
+    def __init__(self, mfa_service: MFAService):
+        self.mfa_service = mfa_service
+    
+    async def start_enrollment(self, user: User) -> dict:
+        """开始 MFA 注册流程"""
+        secret = self.mfa_service.generate_totp_secret()
+        backup_codes = self.mfa_service.generate_backup_codes()
+        
+        # 存储临时注册数据（在实际实现中应加密存储）
+        enrollment_data = {
+            'secret': secret,
+            'backup_codes': backup_codes,
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        # 生成 QR code
+        uri = self.mfa_service.get_totp_uri(secret, user.email)
+        qr_code = self.mfa_service.generate_qr_code(uri)
+        
+        return {
+            'qr_code': qr_code,
+            'secret': secret,  # 仅用于测试，生产环境不应返回
+            'backup_codes': backup_codes,
+            'manual_entry_key': secret  # 用于手动输入
+        }
+
+mfa_service = MFAService()   
+
+
+# ================= 5. 令牌黑名单（分布式） =================
+class TokenBlacklist:
+    """基于Redis的令牌黑名单（高可用）"""
+    def __init__(self):
+        self.redis = Redis.from_url(settings.RATE_LIMIT_STORAGE_URL)
+
+    async def add_token(self, token: str, expires_at: datetime):
+        """添加令牌到黑名单"""
+        ttl = int((expires_at - datetime.now(UTC)).total_seconds())
+        if ttl > 0:
+            await self.redis.setex(f"blacklist:{token}", ttl, "1")
+            logger.info("Token added to blacklist", jti=token[:10] + "...")
+
+    async def is_blacklisted(self, token: str) -> bool:
+        """检查令牌是否在黑名单"""
+        return await self.redis.exists(f"blacklist:{token}") == 1
+
+token_blacklist = TokenBlacklist()
+
+# ================= 6. 权限验证 =================
+class PermissionChecker:
+    """RBAC细粒度权限检查"""
+    @staticmethod
+    def has_role(user: User, roles: List[UserRole]) -> bool:
+        """检查用户角色"""
+        if user.is_superuser:
+            return True
+        return user.role in roles
+
+    @staticmethod
+    def has_permission(user: User, permission: str) -> bool:
+        """检查用户细粒度权限"""
+        if user.is_superuser:
+            return True
+        return permission in (user.permissions or [])
+
+    @staticmethod
+    def has_data_permission(user: User, resource_id: str) -> bool:
+        """数据级权限检查（示例：仅资源所属者/管理员可访问）"""
+        # 需根据业务实现，例如：
+        # - 检查user.id是否为资源创建者
+        # - 检查用户所属租户是否有权限
+        return True
+
+permission_checker = PermissionChecker()
