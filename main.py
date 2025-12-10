@@ -14,7 +14,6 @@ def get_cpu_cores():
         # Linux/Mac
         return multiprocessing.cpu_count()
     except:
-        # Windows 兜底
         return 4
 
 if __name__ == "__main__":
@@ -24,8 +23,8 @@ if __name__ == "__main__":
         "reload": settings.DEBUG,
         "workers": 1,  # 多worker处理
         "proxy_headers": True,  # 支持代理头
-        "forwarded_allow_ips": "*",  # 允许所有转发IP
-        "timeout_keep_alive": 30,  # 连接保持超时
+        "forwarded_allow_ips": "*", 
+        "timeout_keep_alive": 30,
         "timeout_graceful_shutdown": 30,
         "log_level": settings.LOG_LEVEL.lower(),
         "access_log": False,

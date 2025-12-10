@@ -4,7 +4,7 @@ import os
 import sys
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from fastapi.responses import ORJSONResponse
 from datetime import datetime
 from fastapi.routing import APIRoute
@@ -27,10 +27,12 @@ from fastapi_profiler import PyInstrumentProfilerMiddleware
 from starlette.staticfiles import StaticFiles
 from app.models.user import User
 from fastapi_users import FastAPIUsers
+from app.core.middleware2 import EnterpriseRequestContextMiddleware, SlowRequestMiddleware
 from app.services.user_service import auth_backend, get_user_manager
+from rq_dashboard_fast import RedisQueueDashboard
 from typing import Any
 import orjson
-from app.core.logger import logger
+from app.core.logger import logger, bind_contextvars, clear_contextvars
 
 fastapi_users = FastAPIUsers[User, int](
     get_user_manager,
@@ -57,6 +59,15 @@ if sys.platform == "linux":
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
+    bind_contextvars(
+        request_id="startup-001",
+        user_id="system",
+        endpoint="lifespan",
+        client_ip="localhost",
+        trace_idd="trace_id",
+        correlation_id="correlation_id",
+        session_id="session_id",
+    )
     logger.info(
         "Application start...",
         env=settings.ENV,
@@ -98,7 +109,7 @@ async def lifespan(app: FastAPI):
     # 关闭
     logger.info("Shutting down security services")
     await close_redis_client()
-
+    clear_contextvars()
     logger.info("Application shutting down")
     # # 等待异步日志处理器刷新
     # if settings.LOG.ENABLE_ASYNC:
@@ -118,7 +129,10 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENV != "prod" else None, # 生产环境禁用
     default_response_class=CustomORJSONResponse,
 )
-
+# # 初始化仪表盘，参数1: Redis连接URL，参数2: 挂载路径
+dashboard = RedisQueueDashboard(settings.REDIS_URL, "/rq")
+# 将仪表盘挂载到FastAPI应用上
+app.mount("/rq", dashboard)
 app.mount("/static", app=StaticFiles(directory="app/web/static"), name="static")
 app.mount("/ui", app=StaticFiles(directory="app/web/templates"), name="templates")
 mount_bg_tasks_dashboard(app=app, mount_dashboard=True) 
@@ -127,13 +141,19 @@ app.add_middleware(PyInstrumentProfilerMiddleware, is_print_each_request=True)
 app.add_route("/metrics", metrics)  
 Instrumentator().instrument(app).expose(app, endpoint="/jjxxzx/metrics")
 # FastAPIInstrumentor.instrument_app(app)
+# app.add_middleware(
+#     CorrelationIdMiddleware,
+#     header_name="X-Request-ID",  # 可配置为任意头名称
+#     # 可选：自定义ID生成器
+#     generator=lambda: uuid7().hex,
+# )    # 2. 生成请求ID
 app.add_middleware(
-    CorrelationIdMiddleware,
-    header_name="X-Request-ID",  # 可配置为任意头名称
-    # 可选：自定义ID生成器
-    generator=lambda: uuid7().hex,
-)    # 2. 生成请求ID
-
+    EnterpriseRequestContextMiddleware,
+    request_id_header="X-Request-ID",
+    user_id_header="X-User-ID",
+    skip_paths=["/health", "/metrics"]
+)
+app.add_middleware(SlowRequestMiddleware, slow_threshold_ms=500)
 # 设置安全中间件
 SecurityMiddleware.setup_security_middleware(app)
 
@@ -240,6 +260,6 @@ async def read_users_me(request: Request, user: User = Depends(current_user)):
 
 @app.get("/favicon.ico")
 async def favicon():
-    return CustomORJSONResponse(status_code=200)
+    return Response(status_code=200)
     
  
