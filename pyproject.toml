@@ -3,7 +3,7 @@ name = "fastxai"
 version = "0.1.0"
 description = "An multi-agents project with langchain(langgraph)1.0，realtime knowledge graph(graphiti-core), vector dbs and LLM..."
 readme = "README.md"
-requires-python = ">=3.11, <3.13"
+requires-python = ">=3.11, <=3.13"
 authors = [{name="cjf", email="cjf_junfeng@163.com"}]
 
 classifiers = [
@@ -31,7 +31,7 @@ dependencies = [
     "pydantic-settings==2.12.0",
     "psycopg[binary,pool]==3.3.2",
     "psycopg[c]==3.3.2; sys_platform != 'win32'",
-    "sqlalchemy[asyncio]==2.0.44",
+    "sqlalchemy[asyncio]==2.0.45",
     "fastapi-bgtasks-dashboard>=0.1.5",
     "rq-dashboard-fast>=0.5.12",
     "pydantic-extra-types==2.10.6",
@@ -43,9 +43,9 @@ dependencies = [
     "slowapi>=0.1.9",
     "fastmcp==2.13.3",
     "msgpack==1.1.2",
-    "numba==0.62.1",
+    "numba==0.63.1",
     "orjson==3.11.5",
-    "polars==1.35.2",
+    "polars==1.36.1",
     "psutil==7.1.3",
     "graphiti-core==0.24.3",
     "langchain==1.1.3",
