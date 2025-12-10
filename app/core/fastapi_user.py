@@ -5,7 +5,7 @@ from app.models.user import User
 from fastapi_users import FastAPIUsers
 from app.core.config import settings
 from app.services.user_service import auth_backend, get_user_manager
-from app.core.logger import logger, bind_contextvars, clear_contextvars
+from app.core.logger import logger
 
 
 fastapi_users = FastAPIUsers[User, int](

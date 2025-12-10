@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 import asyncio
 import aiohttp
 import hashlib
@@ -14,9 +15,16 @@ from jose import JWTError, jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from prometheus_client import Counter, Histogram
+from app.core.logger import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
+
+# 创建指标
+FAST_MCP_CALLS = Counter('fastmcp_calls_total', 'Total number of FastMCP calls')
+FAST_MCP_LATENCY = Histogram('fastmcp_latency_seconds', 'FastMCP call latency', ['model'])
+FAST_MCP_ERRORS = Counter('fastmcp_errors_total', 'Total number of FastMCP errors', ['model'])
 
 
 # 异步 Redis 客户端
@@ -96,7 +104,7 @@ class FastMCPClientPool2:
             # 轮询选择 FastMCP 服务端（负载均衡）
             server = self.servers[_ % len(self.servers)]
             client = FastMCPTransport(
-                server_url=server,
+                url=server,
                 timeout=aiohttp.ClientTimeout(total=settings.FAST_MCP_TIMEOUT)
             )
             await self.pool.put(client)
@@ -135,7 +143,7 @@ class FastMCPClientPool:
             # 核心修正1：将 server_url 改为 base_url
             # 核心修正2：传递预先创建的 session（包含 timeout）
             client = FastMCPTransport(
-                base_url=server,  # 替换 server_url 为 base_url
+                url=server,  # 替换 server_url 为 base_url
                 session=self.session  # 传递aiohttp session（包含超时配置）
             )
             await self.pool.put(client)
@@ -175,6 +183,7 @@ async def call_fastmcp(
     :param max_tokens: 最大生成token
     :return: 模型响应文本
     """
+    start_time = time.time()
     client = None
     for retry in range(settings.FAST_MCP_RETRY_TIMES):
         try:
@@ -196,64 +205,25 @@ async def call_fastmcp(
             # 释放客户端
             await mcp_client_pool.release_client(client)
             logger.info(f"FastMCP 2.13.3 调用成功，模型：{model}，重试次数：{retry}")
-            return result
-        
-        except Exception as e:
-            # 释放客户端（避免连接泄漏）
-            if client:
-                await mcp_client_pool.release_client(client)
-            logger.error(f"FastMCP 2.13.3 调用失败（重试{retry+1}/{settings.FAST_MCP_RETRY_TIMES}）：{str(e)}")
-            if retry == settings.FAST_MCP_RETRY_TIMES - 1:
-                # 降级策略
-                logger.warning(f"FastMCP 2.13.3 调用降级，模型：{model}")
-                return "暂时无法获取响应，请稍后重试"
-            await asyncio.sleep(0.5)  # 重试间隔
 
-# FastMCP 调用核心函数（带重试、降级）
-async def call_fastmcp2(
-    model: str,
-    prompt: str,
-    temperature: float = 0.7,
-    max_tokens: int = 1024
-) -> str:
-    """
-    调用 FastMCP 服务，返回模型响应
-    :param model: 模型名称（如 gpt-3.5-turbo、qwen-7b）
-    :param prompt: 输入提示词
-    :param temperature: 温度系数
-    :param max_tokens: 最大生成token
-    :return: 模型响应文本
-    """
-    client = None
-    for retry in range(settings.FAST_MCP_RETRY_TIMES):
-        try:
-            # 从连接池获取客户端
-            client = await mcp_client_pool.get_client()
-            
-            # 构建 FastMCP 请求（标准化格式）
-            request = {
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            }
-            
-            # 异步调用 FastMCP 服务
-            response = await client.chat.completions.create(**request)
-            result = response.choices[0].message.content
-            
-            # 释放客户端
-            await mcp_client_pool.release_client(client)
-            logger.info(f"FastMCP 调用成功，模型：{model}，重试次数：{retry}")
-            return result
-        
+            FAST_MCP_CALLS.inc()
+            FAST_MCP_LATENCY.labels(model=model).observe(time.time() - start_time)
+
+            return result        
         except Exception as e:
+            FAST_MCP_ERRORS.labels(model=model).inc()
             # 释放客户端（避免连接泄漏）
             if client:
                 await mcp_client_pool.release_client(client)
-            logger.error(f"FastMCP 调用失败（重试{retry+1}/{settings.FAST_MCP_RETRY_TIMES}）：{str(e)}")
+            logger.error(f"FastMCP 调用失败（重试{retry+1}/{settings.FAST_MCP_RETRY_TIMES}）：{str(e)}")            
+
+            # 降级策略：尝试从缓存获取
             if retry == settings.FAST_MCP_RETRY_TIMES - 1:
-                # 降级策略：返回默认响应（或备用模型）
+                cached_response = await get_cached_response(model, prompt)
+                if cached_response:
+                    logger.warning(f"FastMCP 调用失败，使用缓存响应，模型：{model}")
+                    return cached_response
                 logger.warning(f"FastMCP 调用降级，模型：{model}")
                 return "暂时无法获取响应，请稍后重试"
+            
             await asyncio.sleep(0.5)  # 重试间隔
