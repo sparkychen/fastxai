@@ -1,3 +1,5 @@
+**/__pycache__/
+*.pyc
 __pycache__               # Python 编译缓存
 __pycache__/*             # Python 编译缓存
 *.py[cod]                 # 编译产物
