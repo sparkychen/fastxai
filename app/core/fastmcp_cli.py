@@ -183,6 +183,7 @@ async def call_fastmcp(
     :param max_tokens: 最大生成token
     :return: 模型响应文本
     """
+    FAST_MCP_CALLS.inc()
     start_time = time.time()
     client = None
     for retry in range(settings.FAST_MCP_RETRY_TIMES):
@@ -206,7 +207,6 @@ async def call_fastmcp(
             await mcp_client_pool.release_client(client)
             logger.info(f"FastMCP 2.13.3 调用成功，模型：{model}，重试次数：{retry}")
 
-            FAST_MCP_CALLS.inc()
             FAST_MCP_LATENCY.labels(model=model).observe(time.time() - start_time)
 
             return result        

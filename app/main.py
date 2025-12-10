@@ -33,7 +33,7 @@ from app.api.v1.endpoints.fastmcp import router as mcp_router
 from typing import Any
 import orjson
 from app.core.logger import logger, bind_contextvars, clear_contextvars
-from app.core.fastmcp_cli import mcp_client_pool
+from app.core.fastmcp_cli2 import mcp_client_pool
 from app.core.fastapi_user import fastapi_users, current_user, current_superuser
 
 
@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
 
     # 退出时关闭连接池
     await mcp_client_pool.close_pool()
-    
+
     logger.info("Application shutting down")
     # # 等待异步日志处理器刷新
     # if settings.LOG.ENABLE_ASYNC:
