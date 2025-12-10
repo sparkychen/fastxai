@@ -92,7 +92,25 @@ class User(SQLModel, table=True):
     full_name: Optional[str] = Field(sa_column=Column(String(100), nullable=True, comment="用户全名"))
     phone: str = Field(sa_column=Column(String(11), unique=True, index=True, nullable=True, comment="用户手机号"))
     role: UserRole = Field(sa_column=Column(SqlEnum(UserRole), default=UserRole.USER, comment="用户角色role"))
-    status: UserStatus = Field(sa_column=Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, comment="用户角色role"))
+    status: UserStatus = Field(sa_column=Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, comment="用户状态"))
+    # # 核心修改1：显式指定PostgreSQL ENUM，指定schema=public，checkfirst=True（避免重复创建）
+    # role: UserRole = Field(
+    #     sa_column=Column(
+    #         enum.ENUM(UserRole, name='userrole', schema='public', create_type=True, checkfirst=True),
+    #         default=UserRole.USER, 
+    #         comment="用户角色role"
+    #     )
+    # )
+    
+    # # 核心修改2：同理修改UserStatus的ENUM
+    # status: UserStatus = Field(
+    #     sa_column=Column(
+    #         ENUM(UserStatus, name='userstatus', schema='public', create_type=True, checkfirst=True),
+    #         default=UserStatus.ACTIVE, 
+    #         comment="用户状态"
+    #     )
+    # )
+
     is_active: bool = Field(sa_column=Column(Boolean, default=True, comment="是否是活跃状态"))
     is_superuser: bool = Field(sa_column=Column(Boolean, default=False, comment="是否是超级用户"))
     is_verified: bool = Field(sa_column=Column(Boolean, default=False, comment="是否已验证激活"))

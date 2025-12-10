@@ -28,19 +28,13 @@ from starlette.staticfiles import StaticFiles
 from app.models.user import User
 from fastapi_users import FastAPIUsers
 from app.core.middleware2 import EnterpriseRequestContextMiddleware, SlowRequestMiddleware
-from app.services.user_service import auth_backend, get_user_manager
 from rq_dashboard_fast import RedisQueueDashboard
+from app.api.v1.endpoints.fastmcp import router as mcp_router
 from typing import Any
 import orjson
 from app.core.logger import logger, bind_contextvars, clear_contextvars
-
-fastapi_users = FastAPIUsers[User, int](
-    get_user_manager,
-    [auth_backend],
-)
-# ========== 依赖：获取当前用户 ==========
-current_user = fastapi_users.current_user(active=True)
-current_superuser = fastapi_users.current_user(active=True, superuser=True)
+from app.core.fastmcp_cli import mcp_client_pool
+from app.core.fastapi_user import fastapi_users, current_user, current_superuser
 
 
 class CustomORJSONResponse(ORJSONResponse):
@@ -75,6 +69,9 @@ async def lifespan(app: FastAPI):
         log_format=settings.AUDIT_LOG_FORMAT,
         async_log=settings.AUDIT_LOG_ASYNC,
     )
+
+    await mcp_client_pool.init_pool()
+    logger.info("FastAPI 应用启动完成，FastMCP 连接池初始化成功")
     
     if settings.ENV != "prod":
         logger.warning("注册的路由:")
@@ -110,6 +107,10 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down security services")
     await close_redis_client()
     clear_contextvars()
+
+    # 退出时关闭连接池
+    await mcp_client_pool.close_pool()
+    
     logger.info("Application shutting down")
     # # 等待异步日志处理器刷新
     # if settings.LOG.ENABLE_ASYNC:

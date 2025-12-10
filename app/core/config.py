@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     DB_SLAVE_DELAY_CHECK: bool = True      # 开启从库延迟检查
 
 
+    # FastMCP 配置（高性能核心）^M  
+    FAST_MCP_SERVERS: List[str] = Field(default=[f"http://{APP_HOST}:{APP_PORT}"], env="FAST_MCP_SERVERS")
+    FAST_MCP_TIMEOUT: int = Field(default=60, env="FAST_MCP_TIMEOUT")  # 调用超时^M
+    FAST_MCP_POOL_SIZE: int = Field(default=20, env="FAST_MCP_POOL_SIZE")  # 连接池大小^M
+    FAST_MCP_RETRY_TIMES: int = Field(default=2, env="FAST_MCP_RETRY_TIMES")  # 重试次数^M
+
+
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
