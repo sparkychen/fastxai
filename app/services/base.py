@@ -5,11 +5,10 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 from uuid import UUID
 from sqlalchemy import select, update, delete, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
+from app.core.logger import logger
 from app.db.models.base import BaseModel
 from app.db.engine import db_retry
 
-logger = structlog.get_logger("db.crud")
 ModelType = TypeVar("ModelType", bound=BaseModel)
 
 class BaseCRUD(Generic[ModelType]):
