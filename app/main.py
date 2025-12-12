@@ -36,6 +36,7 @@ from app.core.logger import logger, bind_contextvars, clear_contextvars
 from app.core.fastmcp_cli2 import mcp_client_pool
 from app.core.fastapi_user import fastapi_users, current_user, current_superuser
 from fastmcp import FastMCP
+from fastmcp.dependencies import Progress
 
 class CustomORJSONResponse(ORJSONResponse):
     def render(self, content: Any) -> bytes:
@@ -171,8 +172,8 @@ mcp =FastMCP.from_fastapi(app=app, name="fastMCP",
     )
 mcp.http_app(path='/mcp')
 
-@mcp.tool("test_mcp2")
-async def test_mcp(query:str) -> str:
+@mcp.tool("test_mcp2", task=True)
+async def test_mcp(query:str, progress: Progress = Progress()) -> str:
     return f"your query: {query} Okay."
 
 @mcp.resource("config://version")
