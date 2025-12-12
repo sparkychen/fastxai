@@ -23,6 +23,7 @@ api-docs/                 # 自动生成的 API 文档
 Thumbs.db                 # Windows 缩略图
 
 logs/                     # 日志
+logs/**                   # 日志
 
 .vscode/settings.json     # VSCode 工作区设置
 .pycharm_helpers/         # PyCharm 辅助文件

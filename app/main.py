@@ -35,7 +35,7 @@ import orjson
 from app.core.logger import logger, bind_contextvars, clear_contextvars
 from app.core.fastmcp_cli2 import mcp_client_pool
 from app.core.fastapi_user import fastapi_users, current_user, current_superuser
-
+from fastmcp import FastMCP
 
 class CustomORJSONResponse(ORJSONResponse):
     def render(self, content: Any) -> bytes:
@@ -161,6 +161,28 @@ SecurityMiddleware.setup_security_middleware(app)
 # ========== 3. 注册异常处理器 ==========
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
+
+mcp =FastMCP.from_fastapi(app=app, name="fastMCP",                 
+                #  httpx_client_kwargs={
+                #     "headers": {
+                #         "Authorization": "Bearer secret-token",
+                #     }
+                # }
+    )
+mcp.http_app(path='/mcp')
+
+@mcp.tool("test_mcp2")
+async def test_mcp(query:str) -> str:
+    return f"your query: {query} Okay."
+
+@mcp.resource("config://version")
+async def get_version(): 
+    return "2.13.3"
+
+@mcp.prompt
+def summarize_request(text: str) -> str:
+    """Generate a prompt asking for a summary."""
+    return f"Please summarize the following text:\n\n{text}"
 
 # 添加安全路由
 # from app.security.api_keys import validate_api_key
