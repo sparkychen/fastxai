@@ -50,3 +50,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TYPES TO postg
 ALTER DATABASE fastxai OWNER TO postgres123;
  
  #adbc-driver-flightsql 
+
+ # 启动 dev：通过 uv run uvicorn --reload（或配置快捷脚本 uv run dev）启动调试服务

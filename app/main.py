@@ -174,11 +174,12 @@ mcp.http_app(path='/mcp')
 
 @mcp.tool("test_mcp2", task=True)
 async def test_mcp(query:str, progress: Progress = Progress()) -> str:
+    await progress.increment()
     return f"your query: {query} Okay."
 
 @mcp.resource("config://version")
 async def get_version(): 
-    return "2.13.3"
+    return "2.14.0+"
 
 @mcp.prompt
 def summarize_request(text: str) -> str:
