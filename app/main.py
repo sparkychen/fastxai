@@ -188,7 +188,7 @@ async def test_mcp(query:str, progress: Progress = Progress()) -> str:
 async def get_version(): 
     return "2.14.0+"
 
-@mcp.prompt
+@mcp.prompt("test_prompt", description="test prompt to me")
 def summarize_request(text: str) -> str:
     """Generate a prompt asking for a summary."""
     return f"Please summarize the following text:\n\n{text}"
