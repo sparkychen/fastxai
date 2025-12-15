@@ -50,6 +50,18 @@ if sys.platform == "linux":
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
+mcp = FastMCP("Tools")
+mcp_app = mcp.http_app(path='/mcp')
+
+# mcp =FastMCP.from_fastapi(app=app, name="fastMCP",                 
+#                 #  httpx_client_kwargs={
+#                 #     "headers": {
+#                 #         "Authorization": "Bearer secret-token",
+#                 #     }
+#                 # }
+#     )
+mcp_app = mcp.http_app(path='/mcp')
+
 # @auto_rw_separation
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -71,8 +83,10 @@ async def lifespan(app: FastAPI):
         async_log=settings.AUDIT_LOG_ASYNC,
     )
 
-    await mcp_client_pool.init_pool()
-    logger.info("FastAPI 应用启动完成，FastMCP 连接池初始化成功")
+    # await mcp_client_pool.init_pool()
+    # logger.info("FastAPI 应用启动完成，FastMCP 连接池初始化成功")
+    async with mcp_app.lifespan(app):
+            yield
     
     if settings.ENV != "prod":
         logger.warning("注册的路由:")
@@ -163,14 +177,7 @@ SecurityMiddleware.setup_security_middleware(app)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
-mcp =FastMCP.from_fastapi(app=app, name="fastMCP",                 
-                #  httpx_client_kwargs={
-                #     "headers": {
-                #         "Authorization": "Bearer secret-token",
-                #     }
-                # }
-    )
-mcp.http_app(path='/mcp')
+app.mount("/mcp", mcp_app)
 
 @mcp.tool("test_mcp2", task=True)
 async def test_mcp(query:str, progress: Progress = Progress()) -> str:

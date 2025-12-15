@@ -60,3 +60,11 @@ uv pip compile --python-platform x86_64-unknown-linux-gnu pyproject.toml -o requ
 # 2. 生成 Windows 环境的 requirements.txt
 uv pip compile --python-platform windows pyproject.toml -o requirements-windows.txt
 
+# 重置neo4j密码
+sudo systemctl stop neo4j
+sudo neo4j-admin dbms set-initial-password 'Neo4j@123456'  # 重置初始密码
+sudo systemctl start neo4j
+sudo cypher-shell -u neo4j -p 'Neo4j@123456'  # 重新登录
+show DATABASE;
+
+
