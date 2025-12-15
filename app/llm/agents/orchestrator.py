@@ -5,13 +5,10 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint import MemorySaver
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
-import structlog
-
-from src.config.settings import settings
+from app.core.config import settings
 from src.agents.base import BaseAgent
 from src.agents.manager import AgentManager
-
-logger = structlog.get_logger()
+from app.core.logger import logger
 
 class AgentState(Dict[str, Any]):
     """State for agent orchestration"""

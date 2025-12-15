@@ -9,7 +9,7 @@ import asyncpg
 import orjson
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.core.audit_log import sign_audit_log
-from app.core.logger import audit_logger
+from app.core.logger import logger as audit_logger
 from app.core.config import settings
 from uuid_extensions import uuid7
 

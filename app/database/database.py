@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from typing import AsyncGenerator
-from app.config import settings
+from app.core.config import settings
 import asyncio
 from contextlib import asynccontextmanager
 from sqlalchemy import MetaData
