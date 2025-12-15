@@ -179,7 +179,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 app.mount("/mcp", mcp_app)
 
-@mcp.tool("test_mcp2", task=True)
+@mcp.tool("test_mcp2", task=True, description="Send a text message to me")
 async def test_mcp(query:str, progress: Progress = Progress()) -> str:
     await progress.increment()
     return f"your query: {query} Okay."
