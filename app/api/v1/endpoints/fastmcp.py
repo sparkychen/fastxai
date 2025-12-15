@@ -14,7 +14,7 @@ from app.core.fastmcp_cli import call_fastmcp
 from app.core.fastmcp_cli import limiter, get_cached_response, set_cached_response, get_current_user, check_tenant_permission
 from app.core.fastapi_user import fastapi_users, current_user, current_superuser
 
-router = APIRouter(prefix="/mcp", tags=["fastmcp"])
+router = APIRouter(prefix="/mcp/v1", tags=["fastmcp server"])
 
 # 请求数计数器
 REQUEST_COUNT = Counter(

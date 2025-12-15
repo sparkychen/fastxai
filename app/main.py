@@ -177,6 +177,7 @@ SecurityMiddleware.setup_security_middleware(app)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
+app.include_router(mcp_router)
 app.mount("/mcp", mcp_app)
 
 @mcp.tool("test_mcp2", task=True, description="Send a text message to me")
