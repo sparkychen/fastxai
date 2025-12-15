@@ -52,3 +52,11 @@ ALTER DATABASE fastxai OWNER TO postgres123;
  #adbc-driver-flightsql 
 
  # 启动 dev：通过 uv run uvicorn --reload（或配置快捷脚本 uv run dev）启动调试服务
+
+# 查看编译版本：
+uv pip compile --python-platform --help
+# 1. 生成 Linux 环境的 requirements.txt
+uv pip compile --python-platform x86_64-unknown-linux-gnu pyproject.toml -o requirements-linux.tx
+# 2. 生成 Windows 环境的 requirements.txt
+uv pip compile --python-platform windows pyproject.toml -o requirements-windows.txt
+

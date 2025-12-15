@@ -21,6 +21,9 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 from graphiti_core.llm_client.openai_client import OpenAIClient
 from graphiti_core.prompts.models import Message
 import graphiti_core
+from neo4j import GraphDatabase, exceptions
+from graphiti_core.search.search_config import SearchConfig
+from graphiti_core.driver.neo4j_driver import Neo4jDriver
 # from app.core.logger import logger
 logging.basicConfig(
     level="INFO",
@@ -31,8 +34,125 @@ logger = logging.getLogger(__name__)
 
 
 graphiti_root = os.path.dirname(graphiti_core.__file__)
-print(graphiti_root)
-print(f"Graphiti 核心包路径：{graphiti_root}")
+
+async def safe_build_indices_and_constraints(graphiti, delete_existing=False):
+    """
+    安全地构建索引和约束，避免语法错误
+    """
+    if delete_existing:
+        try:
+            # 使用正确的语法删除索引
+            await delete_existing_indices(graphiti)
+            await delete_existing_constraints(graphiti)
+            print("成功删除现有索引和约束")
+        except Exception as e:
+            print(f"删除索引/约束时出错: {e}")
+            # 继续执行，尝试创建新的索引
+    
+    # 创建约束
+    await create_constraints(graphiti)
+    
+    # 创建索引
+    await create_indices(graphiti)
+    
+    print("索引和约束构建完成")
+
+async def delete_existing_indices(graphiti):
+    """安全地删除现有索引"""
+    try:
+        # 获取所有索引
+        result = await graphiti.graph_driver.execute_query(
+            "SHOW INDEXES YIELD name, type"
+        )
+        
+        for record in result.records:
+            index_name = record["name"]
+            index_type = record["type"]
+            
+            try:
+                if index_type == "FULLTEXT":
+                    await graphiti.graph_driver.execute_query(
+                        f"DROP INDEX {index_name}"
+                    )
+                    print(f"已删除全文索引: {index_name}")
+                elif index_type in ["BTREE", "RANGE"]:
+                    await graphiti.graph_driver.execute_query(
+                        f"DROP INDEX {index_name}"
+                    )
+                    print(f"已删除普通索引: {index_name}")
+            except Exception as e:
+                print(f"删除索引 {index_name} 失败: {e}")
+    except Exception as e:
+        print(f"获取索引列表失败: {e}")
+
+async def delete_existing_constraints(graphiti):
+    """安全地删除现有约束"""
+    try:
+        # 获取所有约束
+        result = await graphiti.graph_driver.execute_query(
+            "SHOW CONSTRAINTS YIELD name"
+        )
+        
+        for record in result.records:
+            constraint_name = record["name"]
+            try:
+                await graphiti.graph_driver.execute_query(
+                    f"DROP CONSTRAINT {constraint_name}"
+                )
+                print(f"已删除约束: {constraint_name}")
+            except Exception as e:
+                print(f"删除约束 {constraint_name} 失败: {e}")
+    except Exception as e:
+        print(f"获取约束列表失败: {e}")
+
+async def create_constraints(graphiti):
+    """创建必要的约束"""
+    constraints = [
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (e:Episodic) REQUIRE e.uuid IS UNIQUE",
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (e:Entity) REQUIRE e.uuid IS UNIQUE",
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (s:Semantic) REQUIRE s.uuid IS UNIQUE",
+    ]
+    
+    for constraint_query in constraints:
+        try:
+            await graphiti.graph_driver.execute_query(constraint_query)
+            print(f"创建约束成功: {constraint_query[:50]}...")
+        except Exception as e:
+            print(f"创建约束失败: {constraint_query[:50]}..., 错误: {e}")
+
+async def create_indices(graphiti):
+    """创建必要的索引"""
+    # 全文索引（Graphiti 需要的）
+    fulltext_indexes = [
+        """CREATE FULLTEXT INDEX node_name_and_summary IF NOT EXISTS
+           FOR (n:Entity|Episodic) 
+           ON EACH [n.name, n.summary, n.content]"""
+    ]
+    
+    # 普通索引
+    btree_indexes = [
+        "CREATE INDEX IF NOT EXISTS FOR (e:Episodic) ON (e.valid_at)",
+        "CREATE INDEX IF NOT EXISTS FOR (e:Episodic) ON (e.group_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (e:Episodic) ON (e.source)",
+        "CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.group_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.type)",
+        "CREATE INDEX IF NOT EXISTS FOR (s:Semantic) ON (s.group_id)",
+    ]
+    
+    for index_query in fulltext_indexes:
+        try:
+            await graphiti.graph_driver.execute_query(index_query)
+            print(f"创建全文索引成功: {index_query[:50]}...")
+        except Exception as e:
+            print(f"创建全文索引失败: {index_query[:50]}..., 错误: {e}")
+    
+    for index_query in btree_indexes:
+        try:
+            await graphiti.graph_driver.execute_query(index_query)
+            print(f"创建普通索引成功: {index_query[:50]}...")
+        except Exception as e:
+            print(f"创建普通索引失败: {index_query[:50]}..., 错误: {e}")
+
 
 
 def get_extraction_prompt(text: str) -> str:
@@ -117,6 +237,11 @@ QWEN_API_BASE = os.getenv("QWEN_API_BASE", "http://localhost:11434/v1")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY", "EMPTY")  # 本地模型可能不需要API密钥，填任意值
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:8b")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen3-embedding:0.6b")
+# ======== 关键：设置 Neo4j 日志级别为 INFO ========
+logging.getLogger('neo4j.notifications').setLevel(logging.ERROR)
+# # 完全静音 Neo4j 日志（谨慎使用！）
+# logging.getLogger('neo4j').setLevel(logging.CRITICAL)
+logging.getLogger("httpx").setLevel(logging.ERROR)
 
 ollama_client = OpenAI(
     api_key=QWEN_API_KEY,
@@ -140,13 +265,17 @@ embedder_config = OpenAIEmbedderConfig(api_key=QWEN_API_KEY, base_url=QWEN_API_B
 embedder = OpenAIEmbedder(config=embedder_config)
 cross_encoder = OpenAIRerankerClient(config=llm_config, client=llm_client)
 
+neo4j_driver = Neo4jDriver(uri=NEO4J_URI, user=NEO4J_USER, password=NEO4J_PASSWORD, database="neo4j")
+
 graphiti = Graphiti(
-    uri=NEO4J_URI,
-    user=NEO4J_USER,
-    password=NEO4J_PASSWORD,
+    # uri=NEO4J_URI,
+    # user=NEO4J_USER,
+    # password=NEO4J_PASSWORD,
+    graph_driver=neo4j_driver,
     llm_client=llm_client,
     embedder=embedder,
     cross_encoder=cross_encoder,
+    max_coroutines=20
 )
 
 episodes_data = [
@@ -203,6 +332,90 @@ async def bulk_add_episodes():
     ]
     await graphiti.add_episode_bulk(episodes)
 
+# ====================== 2. 数据解析函数：提取EntityEdge关键信息 ======================
+def parse_entity_edges(edges: List[Any]) -> Dict[str, Any]:
+    """
+    解析EntityEdge列表，提取结构化信息
+    :param edges: graphiti返回的EntityEdge列表
+    :return: 结构化字典
+    """
+    parsed_data = {
+        "user_name": "",          # 用户名（王强）
+        "budget_range": "",       # 预算范围
+        "interested_product": "", # 感兴趣的产品
+        "interested_points": [],  # 感兴趣的产品卖点
+        "call_time": ""           # 来电时间
+    }
+    
+    for edge in edges:
+        # 提取事实描述
+        fact = edge.fact.strip()
+        
+        # 1. 解析预算信息
+        if edge.name == "BUDGET_RANGE":
+            parsed_data["budget_range"] = fact
+            # 从事实中提取用户名（如"王强的预算是5000-7000元" → 王强）
+            if "的预算是" in fact:
+                parsed_data["user_name"] = fact.split("的预算是")[0]
+        
+        # 2. 解析感兴趣的产品和卖点
+        elif edge.name == "INTERESTED_IN":
+            # 提取产品名和感兴趣的点（如"王强对Xiaomi 17 pro max的续航能力非常感兴趣"）
+            if "对" in fact and "的" in fact and "非常感兴趣" in fact:
+                product_part = fact.split("对")[1].split("的")[0]
+                interest_part = fact.split("的")[1].replace("非常感兴趣", "").strip()
+                parsed_data["interested_product"] = product_part
+                parsed_data["interested_points"].append(interest_part)
+        
+        # 3. 解析来电时间
+        elif edge.name == "CALLED_ON":
+            parsed_data["call_time"] = fact
+    
+    # 去重感兴趣的卖点
+    parsed_data["interested_points"] = list(set(parsed_data["interested_points"]))    
+    return parsed_data
+
+# ====================== 3. 构建Prompt并调用大模型 ======================
+def generate_answer_with_llm(parsed_data: Dict[str, Any], user_query: str) -> str:
+    """
+    调用大模型生成最终答案
+    :param parsed_data: 解析后的结构化数据
+    :param user_query: 用户原始查询（预算6000元的智能手机）
+    :return: 大模型生成的自然语言答案
+    """
+    # 构建Prompt模板（清晰、结构化，引导大模型生成精准答案）
+    prompt = f"""
+    你是一名专业的智能客服助手，需要根据以下用户信息，回答用户的查询。
+    【用户核心信息】
+    1. 用户名：{parsed_data['user_name']}
+    2. 预算范围：{parsed_data['budget_range']}
+    3. 感兴趣的手机型号：{parsed_data['interested_product']}
+    4. 感兴趣的产品卖点：{', '.join(parsed_data['interested_points']) if parsed_data['interested_points'] else '无'}
+    5. 来电时间：{parsed_data['call_time']}
+    
+    【用户查询】
+    {user_query}
+    
+    【回答要求】
+    1. 语言自然、亲切，符合客服沟通风格；
+    2. 结合用户预算和兴趣点，精准推荐对应的手机；
+    3. 突出用户关注的卖点，无需编造信息；
+    4. 答案控制在100-200字之间。
+    """
+    
+    # 调用智谱GLM-4.6生成答案
+    llm_config.model
+    response = graphiti.llm_client.model.chat.completions.create(
+        model="glm-4.6",  # 智谱GLM-4.6模型
+        messages=[
+            {"role": "system", "content": "你是专业的手机推荐客服，回答精准、简洁、友好。"},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,  # 适度的随机性，保证回答自然
+        max_tokens=500
+    )    
+    return response.choices[0].message.content.strip()
+
 async def test_graphiti():
     try:
         prompt = """
@@ -226,8 +439,9 @@ async def test_graphiti():
         # resp = await llm_client.generate_response([Message(role="user", content=pmt)])
         # # {'extracted_entities': [{'entity_name': '张先生', 'entity_type': 'Person'}, {'entity_name': 'iPhone 15', 'entity_type': 'Product'}, {'entity_name': '续航能力', 'entity_type': 'Feature'}, {'entity_name': '摄影功能', 'entity_type': 'Feature'}, {'entity_name': '2024-10-26', 'entity_type': 'Date'}, {'entity_name': '6000元', 'entity_type': 'Price'}], 'extracted_relations': [{'source': '张先生', 'target': '续航能力', 'relation_type': 'interested_in'}, {'source': '张先生', 'target': '摄影功能', 'relation_type': 'interested_in'}, {'source': '张先生', 'target': '6000元', 'relation_type': 'budget_range'}, {'source': 'iPhone 15', 'target': '续航能力', 'relation_type': 'has_feature'}, {'source': 'iPhone 15', 'target': '摄影功能', 'relation_type': 'has_feature'}]}
         # print(resp)
-        # await graphiti.build_indices_and_constraints() # delete_existing=True: 首次执行时删除旧约束重建
-        # print("111")
+        print("100")
+        await graphiti.build_indices_and_constraints(False) # delete_existing=True: 首次执行时删除旧约束重建
+        print("111")
         # bulk_add_episodes()
         # 使用 await 来调用异步方法 add_episode
         try:
@@ -259,12 +473,19 @@ async def test_graphiti():
             )
             print("114")
             print(elated_edges)
+
+            # search_config = (
+            #     EDGE_HYBRID_SEARCH_RRF if center_node_uuid is None else EDGE_HYBRID_SEARCH_NODE_DISTANCE
+            # )
             related_nodes = await graphiti.search(
                 query="预算6000元的智能手机",
+                num_results=5
                 #node_type="Product",  # 可指定实体类型
             )
             print("115")
             print(related_nodes)
+            parses_data = parse_entity_edges(related_nodes)
+            print(parses_data)
         except NodeNotFoundError as e:
             print("未找到节点")
             raise e
