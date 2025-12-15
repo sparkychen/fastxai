@@ -44,7 +44,7 @@ dependencies = [
     "python-jose[cryptography]==3.5.0",
     "bleach>=6.3.0",
     "slowapi>=0.1.9",
-    "fastmcp<2.15.0",
+    "fastmcp==2.14.1",
     "msgpack==1.1.2",
     "numba==0.63.1",
     "orjson==3.11.5",
