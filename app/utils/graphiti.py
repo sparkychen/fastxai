@@ -24,6 +24,9 @@ import graphiti_core
 from neo4j import GraphDatabase, exceptions
 from graphiti_core.search.search_config import SearchConfig
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
+from openai import OpenAI
+from openai._exceptions import APIConnectionError as OpenAIConnectionError
+import traceback
 # from app.core.logger import logger
 logging.basicConfig(
     level="INFO",
@@ -404,7 +407,6 @@ def generate_answer_with_llm(parsed_data: Dict[str, Any], user_query: str) -> st
     """
     
     # 调用智谱GLM-4.6生成答案
-    llm_config.model
     response = graphiti.llm_client.model.chat.completions.create(
         model="glm-4.6",  # 智谱GLM-4.6模型
         messages=[
@@ -468,24 +470,76 @@ async def test_graphiti():
         #     )
         #     print("113")
         try:
-            elated_edges = await graphiti.search(
-                query="客户对手机续航能力的兴趣",
-            )
-            print("114")
-            print(elated_edges)
+            # elated_edges = await graphiti.search(
+            #     query="客户对手机续航能力的兴趣",
+            # )
+            # print("114")
+            # print(elated_edges)
 
             # search_config = (
             #     EDGE_HYBRID_SEARCH_RRF if center_node_uuid is None else EDGE_HYBRID_SEARCH_NODE_DISTANCE
             # )
             related_nodes = await graphiti.search(
-                query="预算6000元的智能手机",
-                num_results=5
+                query="预算6000元的智能手机，以及这价位手机的性能特点",
+                num_results=10
                 #node_type="Product",  # 可指定实体类型
             )
             print("115")
             print(related_nodes)
             parses_data = parse_entity_edges(related_nodes)
             print(parses_data)
+            print("########")
+            facts = [result.fact for result in related_nodes]
+            # 从结果中提取关键信息
+            context = "\n".join(facts)
+            # 构造提示词
+            prompt = f"""
+                用户问题是：预算6000元的智能手机，以及这价位手机的性能特点
+                检索到的结果是：{facts}
+                请生成符合中文语境的自然语言回答，保持口语化。
+            """
+            # prompt = f"基于以下信息回答问题：\n{context}\n\n问题：预算6000元的智能手机"
+            # 调用大模型生成回答
+            # 调用Qwen3模型
+            # openai.api_base = QWEN_API_BASE
+            # openai.api_key = QWEN_API_KEY
+            client = OpenAI(
+                api_key="ollama",
+                base_url="http://localhost:11434/v1",
+                timeout=180,
+                max_retries=3,
+            )
+            # response = client.chat.completions.create(
+            #     model="qwen3:8b",
+            #     messages=[
+            #         {"role": "user", "content": prompt}
+            #     ],
+            #     temperature=0.7,
+            #     max_tokens=2048,
+            #     timeout=180,
+            #     stream=False,
+            # )
+            # resp = response.choices[0].message.content
+            stream_chunks = client.chat.completions.create(
+                model="qwen3:8b",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2048,
+                timeout=180,
+                stream=True, #流式
+            )
+            resp = ""
+            for chunk in stream_chunks:
+                content = chunk.choices[0].delta.content
+                if content is not None:
+                    resp += content
+                    print(content, end="", flush=True)
+            print(f"prompt: {prompt}")
+            print(resp)
+        except OpenAIConnectionError as e:
+            traceback.print_exc()
         except NodeNotFoundError as e:
             print("未找到节点")
             raise e
