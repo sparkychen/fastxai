@@ -51,7 +51,7 @@ dependencies = [
     "polars==1.36.1",
     "psutil==7.1.3",
     "graphiti-core==0.24.3",
-    "langchain==1.1.3",
+    "langchain==1.2.0",
     "langchain-community>=0.4.1",
     "langchain-openai==1.1.3",
     "langchain-qdrant==1.1.0",
