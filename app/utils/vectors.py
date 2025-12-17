@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 DB_DIR = os.path.join(PROJECT_ROOT, "vector_storage")
 DB_FILE_PATH = os.path.join(DB_DIR, "milvus_example.db")
 print(DB_FILE_PATH)
+# 3. 确保目录存在
 os.makedirs(DB_DIR, exist_ok=True)
 
 # embeddings = OpenAIEmbeddings(
@@ -22,8 +23,6 @@ embeddings = OllamaEmbeddings(
     base_url="http://localhost:11434",
 )
 # print(embeddings.embed_query("test"))
-
-
 
 vector_store = Milvus(
     embedding_function=embeddings,
