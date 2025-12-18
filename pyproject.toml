@@ -16,8 +16,8 @@ classifiers = [
     "Framework :: FastMCP",
     "Framework :: langchain & langgraph",
     "Framework :: multi-agents",
-    "Framework :: realtime knowledge graph",
-    "Framework :: graphiti-core",
+    "Framework :: realtime knowledge graph :: graphiti-core",
+    "Framework :: vector :: milvus :: qdrant",
 ]
 
 dependencies = [
