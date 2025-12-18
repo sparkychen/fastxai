@@ -933,7 +933,7 @@ lua = [
 
 [[package]]
 name = "fastapi"
-version = "0.124.4"
+version = "0.125.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -941,9 +941,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/cd/21/ade3ff6745a82ea8ad88552b4139d27941549e4f19125879f848ac8f3c3d/fastapi-0.124.4.tar.gz", hash = "sha256:0e9422e8d6b797515f33f500309f6e1c98ee4e85563ba0f2debb282df6343763" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/17/71/2df15009fb4bdd522a069d2fbca6007c6c5487fce5cb965be00fc335f1d1/fastapi-0.125.0.tar.gz", hash = "sha256:16b532691a33e2c5dee1dac32feb31dc6eb41a3dd4ff29a95f9487cb21c054c0" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/3e/57/aa70121b5008f44031be645a61a7c4abc24e0e888ad3fc8fda916f4d188e/fastapi-0.124.4-py3-none-any.whl", hash = "sha256:6d1e703698443ccb89e50abe4893f3c84d9d6689c0cf1ca4fad6d3c15cf69f15" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/34/2f/ff2fcc98f500713368d8b650e1bbc4a0b3ebcdd3e050dcdaad5f5a13fd7e/fastapi-0.125.0-py3-none-any.whl", hash = "sha256:2570ec4f3aecf5cca8f0428aed2398b774fcdfee6c2116f86e80513f2f86a7a1" },
 ]
 
 [package.optional-dependencies]
@@ -1261,7 +1261,7 @@ requires-dist = [
     { name = "celery", specifier = "==5.5.3" },
     { name = "deepagents", specifier = ">=0.3.0" },
     { name = "duckdb", specifier = "==1.4.3" },
-    { name = "fastapi", extras = ["standard"], specifier = "==0.124.4" },
+    { name = "fastapi", extras = ["standard"], specifier = "==0.125.0" },
     { name = "fastapi-bgtasks-dashboard", specifier = ">=0.1.5" },
     { name = "fastapi-csrf-protect", specifier = ">=1.0.7" },
     { name = "fastapi-profiler", specifier = "==1.4.1" },
@@ -1275,7 +1275,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-milvus", specifier = ">=0.3.1" },
     { name = "langchain-neo4j", specifier = ">=0.6.0" },
-    { name = "langchain-openai", specifier = "==1.1.4" },
+    { name = "langchain-openai", specifier = "==1.1.5" },
     { name = "langchain-qdrant", specifier = "==1.1.0" },
     { name = "langgraph", specifier = "==1.0.5" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=3.0.2" },
@@ -2125,16 +2125,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "1.1.4"
+version = "1.1.5"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/cf/f8/223a340be988bc6f87b57837939589930675041a19382462f48827a67575/langchain_openai-1.1.4.tar.gz", hash = "sha256:c3b6d5b58fdeefbeaa90fad9169cf79dddd5db78317ef2f57aa3da9815dc18b6" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/fc/1c/008a6dd7b3523121be1a4f24701b099ae79193dab9b329dfb787bece08bf/langchain_openai-1.1.5.tar.gz", hash = "sha256:a8ca5f3919bd948867c7d427a575b34f7c141110ef7cbc14ea7bbc46363871de" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/fa/77/1436f498a71e9de771976267694c6f1a14cd32de4989b839a29a3950f793/langchain_openai-1.1.4-py3-none-any.whl", hash = "sha256:34ea8d33283f4ce56d4cf4abf0e3d51fef349f6ace2407645f2ff720644f2262" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/e8/c5/22b690a27ba6b1ca6876270473aab1610cb8767314e5038cb6b826d9b69b/langchain_openai-1.1.5-py3-none-any.whl", hash = "sha256:d3a3b0c39e1513bbb9e5d4526c194909a00c5733195dbe90bfea6619b00420ca" },
 ]
 
 [[package]]
@@ -2673,7 +2673,7 @@ wheels = [
 
 [[package]]
 name = "neo4j-graphrag"
-version = "1.10.1"
+version = "1.11.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "fsspec" },
@@ -2687,9 +2687,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "types-pyyaml" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/86/ba/f8db0ef8a82b5d056845b152413d3b3a40a8a7a30cf94dc87523e297a835/neo4j_graphrag-1.10.1.tar.gz", hash = "sha256:6b4671768d8e046e48f1896459eb46ad2f822758839b846fb0d875036bace4d2" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/97/9b/14c9892f2f3f8887b2d4a0a82a4806e9b1518e03f0d4261251f8c88eb1ae/neo4j_graphrag-1.11.0.tar.gz", hash = "sha256:bbbc50c13767feab6bb5088b27038ea5336990eb799351ef39cf234f0ca82161" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/ed/01/b0b2baf70b4833690a0b8c22bd927283d0805ce7631cc081fad0d375476f/neo4j_graphrag-1.10.1-py3-none-any.whl", hash = "sha256:d310c0b8ff569466d5084153e7842fd99578669d9a38c2ca78f63c06ec6b6f3d" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/4c/57/ff5e9a13c0aa449a31b489d54021ec253c3cef90f0885c0e991a10d274c5/neo4j_graphrag-1.11.0-py3-none-any.whl", hash = "sha256:c7bde33b57537f477a0d317a5059996abdd6ce3c317be5e17bfac406e13d100a" },
 ]
 
 [[package]]
@@ -4287,16 +4287,16 @@ wheels = [
 
 [[package]]
 name = "rich-toolkit"
-version = "0.17.0"
+version = "0.17.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
 dependencies = [
     { name = "click" },
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/ad/d0/8f8de36e1abf8339b497ce700dd7251ca465ffca4a1976969b0eaeb596fb/rich_toolkit-0.17.0.tar.gz", hash = "sha256:17ca7a32e613001aa0945ddea27a246f6de01dfc4c12403254c057a8ee542977" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/97/09/3f9b8d9daaf235195c626f21e03604c05b987404ee3bcacee0c1f67f2a8e/rich_toolkit-0.17.1.tar.gz", hash = "sha256:5af54df8d1dd9c8530e462e1bdcaed625c9b49f5a55b035aa0ba1c17bdb87c9a" }
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/b2/42/ef2ed40699567661d03b0b511ac46cf6cee736de8f3666819c12d6d20696/rich_toolkit-0.17.0-py3-none-any.whl", hash = "sha256:06fb47a5c5259d6b480287cd38aff5f551b6e1a307f90ed592453dd360e4e71e" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/7f/7b/15e55fa8a76d0d41bf34d965af78acdaf80a315907adb30de8b63c272694/rich_toolkit-0.17.1-py3-none-any.whl", hash = "sha256:96d24bb921ecd225ffce7c526a9149e74006410c05e6d405bd74ffd54d5631ed" },
 ]
 
 [[package]]
