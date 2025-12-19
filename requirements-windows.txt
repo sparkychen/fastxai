@@ -312,7 +312,7 @@ langchain-milvus==0.3.1
     # via fastxai (pyproject.toml)
 langchain-neo4j==0.6.0
     # via fastxai (pyproject.toml)
-langchain-openai==1.1.5
+langchain-openai==1.1.6
     # via fastxai (pyproject.toml)
 langchain-qdrant==1.1.0
     # via fastxai (pyproject.toml)
