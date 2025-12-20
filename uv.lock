@@ -784,7 +784,7 @@ wheels = [
 
 [[package]]
 name = "datasets"
-version = "4.4.1"
+version = "4.4.2"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "dill" },
@@ -802,9 +802,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/93/bf/0dae295d6d1ba0b1a200a9dd216838464b5bbd05da01407cb1330b377445/datasets-4.4.1.tar.gz", hash = "sha256:80322699aa8c0bbbdb7caa87906da689c3c2e29523cff698775c67f28fdab1fc", size = 585341, upload-time = "2025-11-05T16:00:38.162Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/c4/54/9359803da96bc65439a28fbb014dc2c90b7d4d8034a93b72362b0d40191f/datasets-4.4.2.tar.gz", hash = "sha256:9de16e415c4ba4713eac0493f7c7dc74f3aa21599297f00cc6ddab409cb7b24b", size = 586474, upload-time = "2025-12-19T15:03:09.129Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/3b/5e/6f8d874366788ad5d549e9ba258037d974dda6e004843be1bda794571701/datasets-4.4.1-py3-none-any.whl", hash = "sha256:c1163de5211e42546079ab355cc0250c7e6db16eb209ac5ac6252f801f596c44", size = 511591, upload-time = "2025-11-05T16:00:36.365Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/7b/b5/fefa518c809de7bced5cddb7c21c010da66fa2ae494bda96844a280cc6ce/datasets-4.4.2-py3-none-any.whl", hash = "sha256:6f5ef3417504d9cd663c71c1b90b9a494ff4c2076a2cd6a6e40ceee6ad95befc", size = 512268, upload-time = "2025-12-19T15:03:07.087Z" },
 ]
 
 [[package]]
@@ -1336,7 +1336,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "motor", specifier = "==3.7.1" },
     { name = "msgpack", specifier = "==1.1.2" },
-    { name = "mysqlclient", specifier = ">=2.2.7" },
+    { name = "mysqlclient", specifier = "==2.2.7" },
     { name = "numba", specifier = "==0.63.1" },
     { name = "orjson", specifier = "==3.11.5" },
     { name = "passlib", extras = ["bcrypt"], specifier = "==1.7.4" },
@@ -2141,7 +2141,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "1.2.3"
+version = "1.2.4"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "jsonpatch" },
@@ -2153,9 +2153,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/70/ea/8380184b287da43d3d2556475b985cf3e27569e9d8bbe33195600a98cabb/langchain_core-1.2.3.tar.gz", hash = "sha256:61f5197aa101cd5605879ef37f2b0ac56c079974d94d347849b8d4fe18949746", size = 803567, upload-time = "2025-12-18T20:13:10.574Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/8a/1d/d6de541e14c508a6bf68ccb78e0c86e7e9eaf698595847d89381795268fe/langchain_core-1.2.4.tar.gz", hash = "sha256:1e01c06f98b9904af0de39d2a290d11b4c4e07888dacbbf4bdc7cef259f5a80e", size = 805708, upload-time = "2025-12-19T19:16:10.709Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/f0/57/cfc1d12e273d33d16bab7ce9a135244e6f5677a92a5a99e69a61b22b7d93/langchain_core-1.2.3-py3-none-any.whl", hash = "sha256:c3501cf0219daf67a0ae23f6d6bdf3b41ab695efd8f0f3070a566e368b8c3dc7", size = 476384, upload-time = "2025-12-18T20:13:08.998Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/5a/ee/80e2ff397fb7b528898e673d037eb06de23ba707bd876fad172308e77b71/langchain_core-1.2.4-py3-none-any.whl", hash = "sha256:29ced7690688c85d66a797eb2866815f55c90cc83a94cf8b0ecad949e913f99f", size = 477377, upload-time = "2025-12-19T19:16:09.613Z" },
 ]
 
 [[package]]
@@ -3754,7 +3754,7 @@ wheels = [
 
 [[package]]
 name = "pydocket"
-version = "0.16.0"
+version = "0.16.1"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "cloudpickle" },
@@ -3770,9 +3770,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/f2/d3/ff57fb8ba8180c621b17270a272ee8821a64962887c42962c5a342ab82a9/pydocket-0.16.0.tar.gz", hash = "sha256:675e829a7ea6e978fdbbe0ace342f24c8ec7cf8ed5980694215418e59ff86005", size = 286316, upload-time = "2025-12-18T15:14:53.139Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/2b/ff/87e931e4abc7efb1e8c16adaa55327452931e8c5f460f2ba089447673226/pydocket-0.16.1.tar.gz", hash = "sha256:8663cb6dc801d8b8d703541fb665f4099c84f4d10d8f3fd441e208b080aa4826", size = 289028, upload-time = "2025-12-19T19:43:48.773Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/4e/74/dcf56132e03a24e2591c5f2391902c871e5f1248e0fc175b9f1792e4afaf/pydocket-0.16.0-py3-none-any.whl", hash = "sha256:3d7d0a805bcb68a3a03d96d3c6ba8e607584ed14b0fe3879333a8fff652dda92", size = 61064, upload-time = "2025-12-18T15:14:51.506Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/ad/ab/0da7d0397112546309709f464bdf65de4e1697e3caba07556751fc4d8bcd/pydocket-0.16.1-py3-none-any.whl", hash = "sha256:bc6ccf7e91164761def854b4014101abf23c3cc2fb7d0fa2c4e07ea3bf6a1826", size = 63208, upload-time = "2025-12-19T19:43:47.309Z" },
 ]
 
 [[package]]
@@ -4973,7 +4973,7 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.20.0"
+version = "0.20.1"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "click" },
@@ -4981,22 +4981,22 @@ dependencies = [
     { name = "shellingham" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/8f/28/7c85c8032b91dbe79725b6f17d2fffc595dff06a35c7a30a37bef73a1ab4/typer-0.20.0.tar.gz", hash = "sha256:1aaf6494031793e4876fb0bacfa6a912b551cf43c1e63c800df8b1a866720c37", size = 106492, upload-time = "2025-10-20T17:03:49.445Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/6d/c1/933d30fd7a123ed981e2a1eedafceab63cb379db0402e438a13bc51bbb15/typer-0.20.1.tar.gz", hash = "sha256:68585eb1b01203689c4199bc440d6be616f0851e9f0eb41e4a778845c5a0fd5b", size = 105968, upload-time = "2025-12-19T16:48:56.302Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/78/64/7713ffe4b5983314e9d436a90d5bd4f63b6054e2aca783a3cfc44cb95bbf/typer-0.20.0-py3-none-any.whl", hash = "sha256:5b463df6793ec1dca6213a3cf4c0f03bc6e322ac5e16e13ddd622a889489784a", size = 47028, upload-time = "2025-10-20T17:03:47.617Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/c8/52/1f2df7e7d1be3d65ddc2936d820d4a3d9777a54f4204f5ca46b8513eff77/typer-0.20.1-py3-none-any.whl", hash = "sha256:4b3bde918a67c8e03d861aa02deca90a95bbac572e71b1b9be56ff49affdb5a8", size = 47381, upload-time = "2025-12-19T16:48:53.679Z" },
 ]
 
 [[package]]
 name = "typer-slim"
-version = "0.20.0"
+version = "0.20.1"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
 dependencies = [
     { name = "click" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/8e/45/81b94a52caed434b94da65729c03ad0fb7665fab0f7db9ee54c94e541403/typer_slim-0.20.0.tar.gz", hash = "sha256:9fc6607b3c6c20f5c33ea9590cbeb17848667c51feee27d9e314a579ab07d1a3", size = 106561, upload-time = "2025-10-20T17:03:46.642Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/3f/3d/6a4ec47010e8de34dade20c8e7bce90502b173f62a6b41619523a3fcf562/typer_slim-0.20.1.tar.gz", hash = "sha256:bb9e4f7e6dc31551c8a201383df322b81b0ce37239a5ead302598a2ebb6f7c9c", size = 106113, upload-time = "2025-12-19T16:48:54.206Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/5e/dd/5cbf31f402f1cc0ab087c94d4669cfa55bd1e818688b910631e131d74e75/typer_slim-0.20.0-py3-none-any.whl", hash = "sha256:f42a9b7571a12b97dddf364745d29f12221865acef7a2680065f9bb29c7dc89d", size = 47087, upload-time = "2025-10-20T17:03:44.546Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/d8/f9/a273c8b57c69ac1b90509ebda204972265fdc978fbbecc25980786f8c038/typer_slim-0.20.1-py3-none-any.whl", hash = "sha256:8e89c5dbaffe87a4f86f4c7a9e2f7059b5b68c66f558f298969d42ce34f10122", size = 47440, upload-time = "2025-12-19T16:48:52.678Z" },
 ]
 
 [[package]]
