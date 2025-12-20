@@ -3,7 +3,10 @@
 aiohappyeyeballs==2.6.1
     # via aiohttp
 aiohttp==3.13.2
-    # via langchain-community
+    # via
+    #   fsspec
+    #   instructor
+    #   langchain-community
 aiosignal==1.4.0
     # via aiohttp
 amqp==5.3.1
@@ -23,6 +26,8 @@ anyio==4.12.0
     #   sse-starlette
     #   starlette
     #   watchfiles
+appdirs==1.4.4
+    # via ragas
 argon2-cffi==23.1.0
     # via pwdlib
 argon2-cffi-bindings==25.1.0
@@ -77,6 +82,8 @@ cffi==2.0.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
+cfgv==3.5.0
+    # via pre-commit
 charset-normalizer==3.4.4
     # via requests
 click==8.3.1
@@ -88,6 +95,7 @@ click==8.3.1
     #   rich-toolkit
     #   rq
     #   typer
+    #   typer-slim
     #   uvicorn
 click-didyoumean==0.3.1
     # via celery
@@ -111,14 +119,24 @@ cyclopts==4.3.0
     # via fastmcp
 dataclasses-json==0.6.7
     # via langchain-community
+datasets==4.4.1
+    # via ragas
 deepagents==0.3.0
     # via fastxai (pyproject.toml)
 deprecated==1.3.1
     # via limits
+dill==0.4.0
+    # via
+    #   datasets
+    #   multiprocess
 diskcache==5.6.3
     # via
     #   graphiti-core
+    #   instructor
     #   py-key-value-aio
+    #   ragas
+distlib==0.4.0
+    # via virtualenv
 distro==1.9.0
     # via
     #   anthropic
@@ -132,6 +150,7 @@ docstring-parser==0.17.0
     # via
     #   anthropic
     #   cyclopts
+    #   instructor
 docutils==0.22.3
     # via rich-rst
 duckdb==1.4.3
@@ -167,7 +186,7 @@ fastapi-profiler==1.4.1
     # via fastxai (pyproject.toml)
 fastapi-structlog==0.7.0
     # via fastxai (pyproject.toml)
-fastapi-users==15.0.1
+fastapi-users==15.0.3
     # via
     #   fastxai (pyproject.toml)
     #   fastapi-users-db-sqlalchemy
@@ -177,6 +196,11 @@ fastar==0.8.0
     # via fastapi-cloud-cli
 fastmcp==2.14.1
     # via fastxai (pyproject.toml)
+filelock==3.20.1
+    # via
+    #   datasets
+    #   huggingface-hub
+    #   virtualenv
 flower==2.0.1
     # via fastxai (pyproject.toml)
 freezegun==1.5.5
@@ -186,7 +210,10 @@ frozenlist==1.8.0
     #   aiohttp
     #   aiosignal
 fsspec==2024.12.0
-    # via neo4j-graphrag
+    # via
+    #   datasets
+    #   huggingface-hub
+    #   neo4j-graphrag
 graphiti-core==0.24.3
     # via fastxai (pyproject.toml)
 greenlet==3.3.0
@@ -205,6 +232,8 @@ h2==4.3.0
     # via
     #   httpx
     #   hypercorn
+hf-xet==1.2.0
+    # via huggingface-hub
 hpack==4.1.0
     # via h2
 httpcore==1.0.9
@@ -214,9 +243,11 @@ httptools==0.7.1
 httpx==0.28.1
     # via
     #   anthropic
+    #   datasets
     #   fastapi
     #   fastapi-cloud-cli
     #   fastmcp
+    #   huggingface-hub
     #   langgraph-sdk
     #   langsmith
     #   mcp
@@ -226,12 +257,16 @@ httpx-sse==0.4.3
     # via
     #   langchain-community
     #   mcp
+huggingface-hub==1.2.3
+    # via datasets
 humanize==4.14.0
     # via flower
 hypercorn==0.18.0
     # via fastxai (pyproject.toml)
 hyperframe==6.1.0
     # via h2
+identify==2.6.15
+    # via pre-commit
 idna==3.11
     # via
     #   anyio
@@ -243,6 +278,8 @@ importlib-metadata==8.7.0
     # via
     #   keyring
     #   opentelemetry-api
+instructor==1.13.0
+    # via ragas
 itsdangerous==2.2.0
     # via fastapi-csrf-protect
 jaraco-classes==3.4.0
@@ -258,10 +295,12 @@ jeepney==0.9.0
 jinja2==3.1.6
     # via
     #   fastapi
+    #   instructor
     #   rq-dashboard-fast
-jiter==0.12.0
+jiter==0.11.1
     # via
     #   anthropic
+    #   instructor
     #   openai
 json-repair==0.44.1
     # via neo4j-graphrag
@@ -283,6 +322,7 @@ langchain==1.2.0
     # via
     #   fastxai (pyproject.toml)
     #   deepagents
+    #   ragas
 langchain-anthropic==1.3.0
     # via deepagents
 langchain-classic==1.0.0
@@ -290,7 +330,9 @@ langchain-classic==1.0.0
     #   langchain-community
     #   langchain-neo4j
 langchain-community==0.4.1
-    # via fastxai (pyproject.toml)
+    # via
+    #   fastxai (pyproject.toml)
+    #   ragas
 langchain-core==1.2.2
     # via
     #   deepagents
@@ -306,12 +348,15 @@ langchain-core==1.2.2
     #   langgraph
     #   langgraph-checkpoint
     #   langgraph-prebuilt
-langchain-milvus==0.3.1
+    #   ragas
+langchain-milvus==0.3.2
     # via fastxai (pyproject.toml)
 langchain-neo4j==0.6.0
     # via fastxai (pyproject.toml)
 langchain-openai==1.1.6
-    # via fastxai (pyproject.toml)
+    # via
+    #   fastxai (pyproject.toml)
+    #   ragas
 langchain-qdrant==1.1.0
     # via fastxai (pyproject.toml)
 langchain-text-splitters==1.1.0
@@ -368,6 +413,8 @@ multidict==6.7.0
     # via
     #   aiohttp
     #   yarl
+multiprocess==0.70.18
+    # via datasets
 mypy-extensions==1.1.0
     # via typing-inspect
 mysqlclient==2.2.7
@@ -379,21 +426,32 @@ neo4j==5.28.2
     #   neo4j-graphrag
 neo4j-graphrag==1.10.1
     # via langchain-neo4j
+nest-asyncio==1.6.0
+    # via ragas
+networkx==3.6.1
+    # via ragas
+nodeenv==1.9.1
+    # via pre-commit
 numba==0.63.1
     # via fastxai (pyproject.toml)
 numpy==2.3.5
     # via
+    #   datasets
     #   graphiti-core
     #   langchain-community
     #   neo4j-graphrag
     #   numba
     #   pandas
     #   qdrant-client
+    #   ragas
+    #   scikit-network
     #   scipy
 openai==2.11.0
     # via
     #   graphiti-core
+    #   instructor
     #   langchain-openai
+    #   ragas
 openapi-pydantic==0.5.1
     # via fastmcp
 opentelemetry-api==1.39.1
@@ -426,6 +484,8 @@ ormsgpack==1.12.1
 packaging==25.0
     # via
     #   asgi-correlation-id
+    #   datasets
+    #   huggingface-hub
     #   kombu
     #   langchain-core
     #   langsmith
@@ -433,15 +493,21 @@ packaging==25.0
     #   marshmallow
     #   opentelemetry-instrumentation
 pandas==2.3.3
-    # via pymilvus
+    # via
+    #   datasets
+    #   pymilvus
 passlib==1.7.4
     # via fastxai (pyproject.toml)
 pathable==0.4.4
     # via jsonschema-path
 pathvalidate==3.3.1
     # via py-key-value-aio
+pillow==12.0.0
+    # via ragas
 platformdirs==4.5.1
-    # via fastmcp
+    # via
+    #   fastmcp
+    #   virtualenv
 polars==1.36.1
     # via fastxai (pyproject.toml)
 polars-runtime-32==1.36.1
@@ -450,6 +516,8 @@ portalocker==3.2.0
     # via qdrant-client
 posthog==7.0.1
     # via graphiti-core
+pre-commit==4.5.1
+    # via instructor
 priority==2.0.0
     # via hypercorn
 prometheus-client==0.23.1
@@ -485,7 +553,7 @@ psycopg-pool==3.3.0
     # via
     #   langgraph-checkpoint-postgres
     #   psycopg
-pwdlib==0.2.1
+pwdlib==0.3.0
     # via fastapi-users
 py-key-value-aio==0.3.0
     # via
@@ -493,6 +561,8 @@ py-key-value-aio==0.3.0
     #   pydocket
 py-key-value-shared==0.3.0
     # via py-key-value-aio
+pyarrow==22.0.0
+    # via datasets
 pyasn1==0.6.1
     # via
     #   python-jose
@@ -509,6 +579,7 @@ pydantic==2.12.5
     #   fastapi-structlog
     #   fastmcp
     #   graphiti-core
+    #   instructor
     #   langchain
     #   langchain-anthropic
     #   langchain-classic
@@ -523,9 +594,12 @@ pydantic==2.12.5
     #   pydantic-extra-types
     #   pydantic-settings
     #   qdrant-client
+    #   ragas
     #   sqlmodel
 pydantic-core==2.41.5
-    # via pydantic
+    # via
+    #   instructor
+    #   pydantic
 pydantic-extra-types==2.10.6
     # via fastxai (pyproject.toml)
 pydantic-settings==2.12.0
@@ -576,7 +650,7 @@ python-jose==3.5.0
     # via fastxai (pyproject.toml)
 python-json-logger==4.0.0
     # via pydocket
-python-multipart==0.0.20
+python-multipart==0.0.21
     # via
     #   fastapi
     #   fastapi-users
@@ -589,15 +663,20 @@ pytz==2025.2
     #   pandas
 pyyaml==6.0.3
     # via
+    #   datasets
+    #   huggingface-hub
     #   jsonschema-path
     #   langchain-classic
     #   langchain-community
     #   langchain-core
     #   neo4j-graphrag
+    #   pre-commit
     #   uvicorn
 qdrant-client==1.16.2
     # via langchain-qdrant
 qrcode==8.2
+    # via fastxai (pyproject.toml)
+ragas==0.4.1
     # via fastxai (pyproject.toml)
 redis==6.4.0
     # via
@@ -616,6 +695,8 @@ regex==2025.11.3
     # via tiktoken
 requests==2.32.5
     # via
+    #   datasets
+    #   instructor
     #   jsonschema-path
     #   langchain-classic
     #   langchain-community
@@ -630,7 +711,9 @@ rich==13.9.4
     #   cyclopts
     #   fastapi-structlog
     #   fastmcp
+    #   instructor
     #   pydocket
+    #   ragas
     #   rich-rst
     #   rich-toolkit
     #   typer
@@ -656,8 +739,12 @@ rq-scheduler==0.14.0
     # via rq-dashboard-fast
 rsa==4.9.1
     # via python-jose
+scikit-network==0.33.5
+    # via ragas
 scipy==1.16.3
-    # via neo4j-graphrag
+    # via
+    #   neo4j-graphrag
+    #   scikit-network
 secretstorage==3.5.0
     # via keyring
 sentry-sdk==2.48.0
@@ -669,7 +756,9 @@ sentry-sdk==2.48.0
 setuptools==80.9.0
     # via pymilvus
 shellingham==1.5.4
-    # via typer
+    # via
+    #   huggingface-hub
+    #   typer
 sherlock==0.4.1
     # via fastxai (pyproject.toml)
 six==1.17.0
@@ -717,20 +806,33 @@ tenacity==9.1.2
     # via
     #   fastxai (pyproject.toml)
     #   graphiti-core
+    #   instructor
     #   langchain-community
     #   langchain-core
     #   neo4j-graphrag
 tiktoken==0.12.0
-    # via langchain-openai
+    # via
+    #   langchain-openai
+    #   ragas
 tornado==6.5.3
     # via flower
 tqdm==4.67.1
-    # via openai
+    # via
+    #   datasets
+    #   huggingface-hub
+    #   openai
+    #   ragas
+ty==0.0.4
+    # via instructor
 typer==0.20.0
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
+    #   instructor
     #   pydocket
+    #   ragas
+typer-slim==0.20.0
+    # via huggingface-hub
 types-pyyaml==6.0.12.20250915
     # via neo4j-graphrag
 typing-extensions==4.15.0
@@ -741,6 +843,7 @@ typing-extensions==4.15.0
     #   exceptiongroup
     #   fastapi
     #   grpcio
+    #   huggingface-hub
     #   langchain-core
     #   limits
     #   mcp
@@ -761,6 +864,7 @@ typing-extensions==4.15.0
     #   sqlalchemy
     #   starlette
     #   typer
+    #   typer-slim
     #   typing-inspect
     #   typing-inspection
 typing-inspect==0.9.0
@@ -804,6 +908,8 @@ vine==5.1.0
     #   amqp
     #   celery
     #   kombu
+virtualenv==20.35.4
+    # via pre-commit
 watchfiles==1.1.1
     # via uvicorn
 wcmatch==10.1
@@ -823,7 +929,9 @@ wrapt==1.17.3
 wsproto==1.3.2
     # via hypercorn
 xxhash==3.6.0
-    # via langgraph
+    # via
+    #   datasets
+    #   langgraph
 yarl==1.22.0
     # via aiohttp
 zipp==3.23.0
