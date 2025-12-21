@@ -67,4 +67,7 @@ sudo systemctl start neo4j
 sudo cypher-shell -u neo4j -p 'Neo4j@123456'  # 重新登录
 show DATABASE;
 
+# * uv add langchain-mcp-adapters
+https://github.com/langchain-ai/langchain-mcp-adapters
+
 
